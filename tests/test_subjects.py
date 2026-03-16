@@ -2,11 +2,9 @@ from unittest.mock import patch, MagicMock
 
 from django.test import TestCase
 
-from django.conf import settings
-
-if getattr(settings, 'DEBUG', False):
+try:
     from ethos.ethos.library.subjects import SubjectsMixin
-else:
+except ImportError:
     from ethos.library.subjects import SubjectsMixin
 
 
