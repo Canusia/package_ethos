@@ -1,0 +1,1 @@
+from .test_academic_periods import AcademicPeriodsTest

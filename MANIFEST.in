@@ -1,0 +1,9 @@
+include LICENSE
+include README.md
+include requirements.txt
+recursive-include ethos/templates *
+recursive-include ethos/staticfiles *
+recursive-include ethos/migrations *.py
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude *.pyo
