@@ -1,7 +1,6 @@
 import csv
 import logging
 
-from django.db.models import Q
 from django.core.management.base import BaseCommand
 
 from ...library.ethos import Ethos
@@ -62,8 +61,20 @@ class Command(BaseCommand):
                 return
             self.stdout.write(f'Resolved period GUID: {period_id}')
 
+        from cis.models.term import Term
+        term = Term.objects.filter(external_sis_id=period_id).first()
+        if not term and not _is_uuid(term_arg):
+            term = Term.objects.filter(code=term_arg).first()
+        if not term:
+            self.stdout.write(self.style.ERROR(
+                f'No Term found in DB with external_sis_id={period_id}. '
+                f'Create the term first or run import_terms_from_ethos.'
+            ))
+            return
+        self.stdout.write(f'Using term: {term} (id={term.pk})')
+
         self.stdout.write('Fetching sections from Ethos...')
-        raw_sections = ethos.get_sections(return_type='raw', period_id=period_id)
+        raw_sections = ethos.get_sections(period_id=period_id)
         self.stdout.write(f'Found {len(raw_sections)} sections.')
 
         if csv_path:
@@ -74,7 +85,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.NOTICE('Dry run — pass --create to import into the database.'))
             return
 
-        self._import(raw_sections, skip_certificates)
+        self._import(raw_sections, skip_certificates, term)
 
     def _dry_run(self, raw_sections):
         for section in raw_sections:
@@ -105,6 +116,7 @@ class Command(BaseCommand):
             )
 
     def _write_csv(self, raw_sections, path):
+        from django.db.models import Q
         from cis.models.term import Term
         from cis.models.course import Cohort, Course
         from cis.models.highschool import HighSchool
@@ -221,40 +233,16 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f'CSV written to {path} ({len(raw_sections)} rows)'))
 
-    def _import(self, raw_sections, skip_certificates):
-        from cis.models.term import Term, AcademicYear
-        from cis.models.course import Cohort, Course
-        from cis.models.highschool import HighSchool
-        from cis.models.teacher import Teacher, TeacherHighSchool, TeacherCourseCertificate
-        from cis.models.section import ClassSection
+    def _import(self, raw_sections, skip_certificates, term):
+        from ...library.importer import SectionImporter
 
-        counts = {
-            'term_created': 0,
-            'course_created': 0,
-            'teacher_created': 0,
-            'teacher_hs_created': 0,
-            'cert_created': 0,
-            'section_created': 0,
-            'section_updated': 0,
-            'section_skipped': 0,
-        }
+        counts = SectionImporter().import_sections(raw_sections, term, skip_certificates)
 
-        for section in raw_sections:
-            try:
-                self._process_section(
-                    section, counts, skip_certificates,
-                    Term, AcademicYear, Cohort, Course,
-                    HighSchool, Teacher, TeacherHighSchool,
-                    TeacherCourseCertificate, ClassSection,
-                )
-            except Exception as e:
-                code = section.get('code', '?')
-                self.stdout.write(self.style.ERROR(f'  Error processing section {code}: {e}'))
-                logger.exception(f'Error processing section {code}')
+        for err in counts.get('errors', []):
+            self.stdout.write(self.style.ERROR(f'  Error processing section {err["code"]}: {err["error"]}'))
 
         self.stdout.write(self.style.SUCCESS(
             f'\nImport complete:\n'
-            f'  Terms created:              {counts["term_created"]}\n'
             f'  Courses created:            {counts["course_created"]}\n'
             f'  Teachers created:           {counts["teacher_created"]}\n'
             f'  TeacherHighSchool created:  {counts["teacher_hs_created"]}\n'
@@ -263,181 +251,3 @@ class Command(BaseCommand):
             f'  Sections updated:           {counts["section_updated"]}\n'
             f'  Sections skipped:           {counts["section_skipped"]}\n'
         ))
-
-    def _process_section(
-        self, section, counts, skip_certificates,
-        Term, AcademicYear, Cohort, Course,
-        HighSchool, Teacher, TeacherHighSchool,
-        TeacherCourseCertificate, ClassSection,
-    ):
-        # ── a. TERM + ACADEMIC YEAR ────────────────────────────────────────────
-        reporting_period_id = section.get('reportingAcademicPeriod', {}).get('id')
-        term = Term.objects.filter(external_sis_id=reporting_period_id).first() if reporting_period_id else None
-
-        if term is None:
-            schedule_period = section.get('scheduleAcademicPeriod', {})
-            title = schedule_period.get('title', '')
-            code = schedule_period.get('code', '')
-            year_str = title.split()[-1] if title else ''
-
-            if not year_str:
-                self.stdout.write(self.style.WARNING(
-                    f'  Skipping section {section.get("code")} — cannot determine term year'
-                ))
-                counts['section_skipped'] += 1
-                return
-
-            academic_year = AcademicYear.get_or_add(name=year_str)
-            term = Term.get_or_add(
-                academic_year, label=title, code=code,
-                external_sis_id=reporting_period_id,
-            )
-            counts['term_created'] += 1
-            self.stdout.write(f'  Created term: {title} ({code})')
-
-        # ── b. COHORT + COURSE ─────────────────────────────────────────────────
-        course_data = section.get('course', {})
-        subject = course_data.get('subject', {})
-        subject_abbr = subject.get('abbreviation', '')
-        subject_title = subject.get('title', subject_abbr)
-        catalog_num = course_data.get('number', '')
-        titles = course_data.get('titles', [{}])
-        course_title = titles[0].get('value', '') if titles else ''
-
-        if not subject_abbr or not catalog_num:
-            self.stdout.write(self.style.WARNING(
-                f'  Skipping section {section.get("code")} — missing subject or catalog number'
-            ))
-            counts['section_skipped'] += 1
-            return
-
-        cohort = Cohort.get_or_add(cohort_designator=subject_abbr, title=subject_title)
-        course, course_created = Course.objects.get_or_create(
-            cohort=cohort,
-            catalog_number=catalog_num,
-            campus=None,
-            defaults={
-                'title': course_title,
-                'name': f'{subject_abbr} {catalog_num}',
-                'status': 'Active',
-            },
-        )
-        if course_created:
-            counts['course_created'] += 1
-
-        # ── c. HIGH SCHOOL ─────────────────────────────────────────────────────
-        highschool = None
-        try:
-            building_code = section['instructionalEvents'][0]['locations'][0]['location']['building']['code']
-        except (KeyError, IndexError):
-            building_code = None
-
-        if building_code:
-            highschool = HighSchool.objects.filter(Q(sau=building_code) | Q(code=building_code)).first()
-            if highschool is None:
-                self.stdout.write(self.style.WARNING(
-                    f'  No HighSchool found for building code "{building_code}" '
-                    f'(section {section.get("code")})'
-                ))
-
-        # ── d. INSTRUCTORS ─────────────────────────────────────────────────────
-        teacher = None
-        roster = section.get('instructorRosterDetails', [])
-
-        teachers_found = []
-        for roster_entry in roster:
-            credentials = roster_entry.get('instructor', {}).get('credentials', [])
-            banner_id = next((c['value'] for c in credentials if c.get('type') == 'bannerId'), None)
-            if not banner_id:
-                continue
-            t = Teacher.objects.filter(user__psid=banner_id).first()
-            if t:
-                teachers_found.append((t, roster_entry))
-
-        if len(teachers_found) > 1:
-            self.stdout.write(self.style.WARNING(
-                f'  Multiple DB teachers found for section {section.get("code")} — skipping teacher link'
-            ))
-        elif len(teachers_found) == 1:
-            teacher = teachers_found[0][0]
-        else:
-            # No DB match — create from primary instructor entry (fall back to first)
-            entry = next(
-                (r for r in roster if r.get('instructorRole') == 'primary'),
-                roster[0] if roster else None,
-            )
-            if entry:
-                instructor = entry.get('instructor', {})
-                credentials = instructor.get('credentials', [])
-                banner_id = next((c['value'] for c in credentials if c.get('type') == 'bannerId'), None)
-                banner_username = next((c['value'] for c in credentials if c.get('type') == 'bannerUserName'), None)
-                names = instructor.get('names', [{}])
-                first_name = names[0].get('firstName', '') if names else ''
-                last_name = names[0].get('lastName', '') if names else ''
-                email = (banner_username + '@ewu.edu') if banner_username else None
-
-                if banner_id and email:
-                    teacher = Teacher.get_or_add(
-                        psid=banner_id,
-                        email=email,
-                        first_name=first_name,
-                        last_name=last_name,
-                    )
-                    counts['teacher_created'] += 1
-                    self.stdout.write(f'  Created teacher: {first_name} {last_name} ({email})')
-
-        # ── e. TEACHER ↔ HIGHSCHOOL ────────────────────────────────────────────
-        teacher_hs = None
-        if teacher and highschool:
-            teacher_hs, created = TeacherHighSchool.objects.get_or_create(
-                teacher=teacher,
-                highschool=highschool,
-                defaults={'status': 'In the Program'},
-            )
-            if created:
-                counts['teacher_hs_created'] += 1
-
-        # ── f. TEACHER COURSE CERTIFICATE ─────────────────────────────────────
-        if teacher_hs and course and not skip_certificates:
-            _, created = TeacherCourseCertificate.objects.get_or_create(
-                course=course,
-                teacher_highschool=teacher_hs,
-                defaults={'status': 'Teaching'},
-            )
-            if created:
-                counts['cert_created'] += 1
-
-        # ── g. CLASS SECTION ───────────────────────────────────────────────────
-        try:
-            class_number = int(section['code'])
-        except (KeyError, ValueError):
-            self.stdout.write(self.style.WARNING(f'  Skipping section — invalid code: {section.get("code")}'))
-            counts['section_skipped'] += 1
-            return
-
-        section_number = section.get('number', '')
-        start_date = section.get('startOn') or None
-        end_date = section.get('endOn') or None
-        status_category = section.get('status', {}).get('category', '')
-        status = 'A' if status_category == 'open' else 'C'
-        max_enrollment = section.get('maxEnrollment', 0) or 0
-
-        obj, created = ClassSection.objects.update_or_create(
-            class_number=class_number,
-            term=term,
-            defaults={
-                'section_number': section_number,
-                'course': course,
-                'highschool': highschool,
-                'teacher': teacher,
-                'start_date': start_date,
-                'end_date': end_date,
-                'status': status,
-                'meta': section,
-                'max_enrollment': max_enrollment,
-            },
-        )
-        if created:
-            counts['section_created'] += 1
-        else:
-            counts['section_updated'] += 1

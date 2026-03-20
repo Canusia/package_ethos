@@ -18,6 +18,7 @@ ethos/                           ← git submodule root (outer package)
 └── ethos/                       ← inner Django app
     ├── __init__.py
     ├── apps.py                  # EthosConfig (prod) + DevEthosConfig (dev)
+    ├── tasks.py                 # django-tasks background task: import_sections_for_term
     ├── library/                 # All Ethos API client code
     │   ├── base.py              # EthosBase — auth, _api_request, GUID loading
     │   ├── ethos.py             # Ethos class — composes all mixins
@@ -28,14 +29,20 @@ ethos/                           ← git submodule root (outer package)
     │   ├── subjects.py          # SubjectsMixin
     │   ├── registration.py      # RegistrationMixin
     │   ├── payment.py           # PaymentMixin
-    │   └── section.py           # SectionMixin
+    │   ├── section.py           # SectionMixin — get_sections()
+    │   └── importer/            # Institution-specific section importers
+    │       ├── __init__.py      # Reads EXTERNAL_SIS_IMPORTER from settings, exports SectionImporter
+    │       └── ewu/
+    │           └── section_import.py  # EWU SectionImporter
     ├── views/
     │   ├── academic_periods.py  # AcademicYear/Term import from Ethos
+    │   ├── sections.py          # trigger_section_import, section_import_status (AJAX)
     │   └── subjects.py          # Cohort/Subject import from Ethos
     └── management/commands/
         ├── import_subjects_from_ethos.py
         ├── import_terms_from_ethos.py
-        └── import_courses_from_ethos.py
+        ├── import_courses_from_ethos.py
+        └── import_sections_from_ethos.py
 ```
 
 ## Dual App Configuration
@@ -80,6 +87,71 @@ This app depends on `cis` for:
 - `cis.settings.sis_settings` — GUID configuration
 - `cis.utils.active_term` — current term lookup
 - `cis.validators.validate_ssn` — SSN validation
+
+## Institution-Specific Importers
+
+Section import logic is institution-specific and lives under `library/importer/`. The active importer is selected by `EXTERNAL_SIS_IMPORTER` in `myce/settings.py`:
+
+```python
+# myce/settings.py
+EXTERNAL_SIS_IMPORTER = 'ewu'
+```
+
+`library/importer/__init__.py` reads this setting and dynamically exports `SectionImporter`. To add a new institution, create `library/importer/<institution>/section_import.py` with a `SectionImporter` class and update the setting.
+
+All callers import from the package root:
+```python
+from ethos.ethos.library.importer import SectionImporter
+```
+
+## Background Tasks
+
+`tasks.py` defines `import_sections_for_term(term_id)` as a `django-tasks` `@task`. It:
+1. Resolves the Ethos period ID from `term.external_sis_id` (or falls back to `get_academic_period_id(term.code)`)
+2. Fetches raw sections via `Ethos().get_sections(period_id=...)`
+3. Runs `SectionImporter().import_sections(raw_sections, term=term)`
+4. Returns a counts dict
+
+Run the worker:
+```bash
+docker exec django_web_ewu python /app/webapp/manage.py db_worker
+```
+
+## Management Commands
+
+| Command | Description |
+|---|---|
+| `import_subjects_from_ethos` | Sync subjects/cohorts from Ethos |
+| `import_terms_from_ethos` | Sync academic periods/terms from Ethos |
+| `import_courses_from_ethos` | Sync courses from Ethos (`--create` to write to DB) |
+| `import_sections_from_ethos` | Sync sections for a term from Ethos |
+
+### import_sections_from_ethos
+
+Requires the term to already exist in the DB (matched by `external_sis_id` or `code`). Sections are always linked to that term.
+
+```bash
+# Dry run (prints what would be created)
+python manage.py import_sections_from_ethos 202620
+
+# Write to database
+python manage.py import_sections_from_ethos 202620 --create
+
+# Pass academic period GUID directly
+python manage.py import_sections_from_ethos 0840696f-a9c4-46d9-acbc-1e335c240155 --create
+
+# Export to CSV (works with or without --create)
+python manage.py import_sections_from_ethos 202620 --csv /tmp/sections.csv
+
+# Skip TeacherCourseCertificate creation
+python manage.py import_sections_from_ethos 202620 --create --no-certificates
+```
+
+The CSV export includes columns: `id`, `course_name`, `highschool`, `section_number`, `class_number`, `term_name`, `term_code`, `instructor_name`, `instructor_email`, plus status flags `term_status`, `course_status`, `highschool_status`, `teacher_status`.
+
+### section.py — SectionMixin notes
+
+- `get_sections(term_code=None, period_id=None)` — returns raw Ethos section dicts; pass `period_id` to skip the term code lookup
 
 ## Running Tests
 
