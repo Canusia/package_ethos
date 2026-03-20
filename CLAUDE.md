@@ -11,6 +11,7 @@ ethos/                           ← git submodule root (outer package)
 ├── __init__.py                  # Outer package init (empty)
 ├── setup.py, setup.cfg          # Package distribution config
 ├── MANIFEST.in, requirements.txt
+├── README.md                    # Host app integration instructions
 ├── CLAUDE.md
 ├── tests/                       # Tests at outer level
 │   ├── test_academic_periods.py
@@ -19,11 +20,12 @@ ethos/                           ← git submodule root (outer package)
     ├── __init__.py
     ├── apps.py                  # EthosConfig (prod) + DevEthosConfig (dev)
     ├── tasks.py                 # django-tasks background task: import_sections_for_term
+    ├── urls.py                  # All ethos URL patterns (app_name='ethos')
     ├── library/                 # All Ethos API client code
     │   ├── base.py              # EthosBase — auth, _api_request, GUID loading
     │   ├── ethos.py             # Ethos class — composes all mixins
     │   ├── person.py            # PersonMixin
-    │   ├── academic.py          # AcademicMixin
+    │   ├── academic.py          # AcademicMixin — get_sites, get_academic_programs
     │   ├── academic_periods.py  # AcademicPeriodsMixin
     │   ├── courses.py           # CoursesMixin
     │   ├── subjects.py          # SubjectsMixin
@@ -37,13 +39,26 @@ ethos/                           ← git submodule root (outer package)
     ├── views/
     │   ├── academic_periods.py  # AcademicYear/Term import from Ethos
     │   ├── sections.py          # trigger_section_import, section_import_status (AJAX)
+    │   ├── status.py            # API Explorer — status_page, run_method, METHOD_REGISTRY
     │   └── subjects.py          # Cohort/Subject import from Ethos
+    ├── templates/ethos/
+    │   └── status.html          # API Explorer UI
     └── management/commands/
         ├── import_subjects_from_ethos.py
         ├── import_terms_from_ethos.py
         ├── import_courses_from_ethos.py
         └── import_sections_from_ethos.py
 ```
+
+## Host App Integration
+
+See `README.md` for full integration steps. In brief, the host app (`myce/`) must:
+
+1. Add the correct `INSTALLED_APPS` entry (see Dual App Configuration below)
+2. Add ethos `staticfiles/` to `STATICFILES_DIRS` (DEBUG-conditional path)
+3. Set `EXTERNAL_SIS_IMPORTER = '<institution>'` in `settings.py`
+4. Include `path('ce/ethos/', include('ethos.ethos.urls'))` in `myce/urls.py`
+5. Create component registry files in `myce/component_registry/` with `_prefix`-based handler paths (see README)
 
 ## Dual App Configuration
 
@@ -60,10 +75,10 @@ from .base import EthosBase        # within library/
 from ..library.ethos import Ethos  # from views/
 ```
 
-External imports (from CIS or other apps) use **DEBUG-based switching**:
+External imports (from CIS or other apps) use **`find_spec`-based switching**:
 ```python
-from django.conf import settings
-if getattr(settings, 'DEBUG', False):
+import importlib.util
+if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.library.ethos import Ethos
 else:
     from ethos.library.ethos import Ethos

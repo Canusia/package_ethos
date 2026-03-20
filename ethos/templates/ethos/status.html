@@ -1,0 +1,172 @@
+{% extends "cis/logged-base.html" %}
+
+{% block title %}Ethos API Explorer{% endblock %}
+
+{% block body %}
+<div class="row mb-3">
+  <div class="col">
+    <h3>Ethos API Explorer</h3>
+    <p class="text-muted small">Read-only Ethos method explorer. Results are live API calls.</p>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Left: method list -->
+  <div class="col-md-3">
+    <div class="card shadow-sm" style="position: sticky; top: 20px;">
+      <div class="card-body p-2">
+        {% for group_key, group in registry.items %}
+        <p class="text-uppercase text-muted small font-weight-bold mt-2 mb-1 px-2">{{ group.label }}</p>
+        {% for method_name, method_meta in group.methods.items %}
+        <a href="#"
+           class="d-block px-2 py-1 rounded method-link {% if forloop.parentloop.first and forloop.first %}active bg-primary text-white{% else %}text-dark{% endif %}"
+           data-method="{{ method_name }}"
+           style="font-size: 0.85rem; text-decoration: none;">
+          {{ method_name }}
+        </a>
+        {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: detail + form + response -->
+  <div class="col-md-9">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div id="method-header" class="mb-3">
+          <h4 id="method-title" class="d-inline-block mr-2">—</h4>
+          <span class="badge badge-success" style="font-size: 0.8rem;">GET</span>
+        </div>
+        <p id="method-doc" class="text-muted"></p>
+
+        <form id="param-form" class="mb-3">
+          <div id="param-fields"></div>
+          <button type="submit" class="btn btn-primary mt-2" id="execute-btn">
+            Execute
+          </button>
+        </form>
+
+        <div id="response-panel" class="d-none">
+          <hr>
+          <h6 class="text-muted">Response</h6>
+          <pre id="response-output"
+               style="background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px; padding:12px; max-height:500px; overflow:auto; font-size:0.8rem;"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var REGISTRY = {{ registry_json|safe }};
+var RUN_URL = "{% url 'ethos:ethos_run_method' %}";
+var CSRF_TOKEN = "{{ csrf_token }}";
+
+var currentMethod = null;
+
+function findMethod(name) {
+  for (var gk in REGISTRY) {
+    var group = REGISTRY[gk];
+    if (group.methods[name]) {
+      return group.methods[name];
+    }
+  }
+  return null;
+}
+
+function loadMethod(name) {
+  var meta = findMethod(name);
+  if (!meta) return;
+  currentMethod = name;
+
+  $('#method-title').text(name);
+  $('#method-doc').text(meta.doc || '');
+
+  var $fields = $('#param-fields');
+  $fields.empty();
+
+  if (meta.params && meta.params.length > 0) {
+    meta.params.forEach(function(p) {
+      var label = p.name;
+      if (!p.required) label += ' <span class="text-muted font-weight-normal">(optional)</span>';
+      var html = '<div class="form-group row mb-2">' +
+        '<label class="col-sm-3 col-form-label col-form-label-sm">' + label + '</label>' +
+        '<div class="col-sm-9">' +
+        '<input type="text" class="form-control form-control-sm param-input" ' +
+        'name="' + p.name + '" placeholder="' + (p.placeholder || '') + '">' +
+        '</div></div>';
+      $fields.append(html);
+    });
+  } else {
+    $fields.append('<p class="text-muted small">No parameters required.</p>');
+  }
+
+  // Reset response panel
+  $('#response-panel').addClass('d-none');
+  $('#response-output').text('').css('border-color', '#dee2e6');
+
+  // Highlight active link
+  $('.method-link').removeClass('active bg-primary text-white').addClass('text-dark');
+  $('.method-link[data-method="' + name + '"]').addClass('active bg-primary text-white').removeClass('text-dark');
+}
+
+$(document).ready(function() {
+  // Load the first method by default
+  var firstGroup = Object.keys(REGISTRY)[0];
+  var firstMethod = Object.keys(REGISTRY[firstGroup].methods)[0];
+  loadMethod(firstMethod);
+
+  // Method click
+  $(document).on('click', '.method-link', function(e) {
+    e.preventDefault();
+    loadMethod($(this).data('method'));
+  });
+
+  // Form submit
+  $('#param-form').on('submit', function(e) {
+    e.preventDefault();
+    if (!currentMethod) return;
+
+    var params = {};
+    $('.param-input').each(function() {
+      params[$(this).attr('name')] = $(this).val();
+    });
+
+    var $btn = $('#execute-btn');
+    $btn.prop('disabled', true).text('Running…');
+
+    $.ajax({
+      type: 'POST',
+      url: RUN_URL,
+      contentType: 'application/json',
+      data: JSON.stringify({
+        method_name: currentMethod,
+        params: params
+      }),
+      headers: {
+        'X-CSRFToken': CSRF_TOKEN
+      },
+      success: function(data) {
+        var text = JSON.stringify(data.result !== undefined ? data.result : data, null, 2);
+        $('#response-output').text(text).css('border-color', '#28a745');
+        $('#response-panel').removeClass('d-none');
+      },
+      error: function(xhr) {
+        var msg;
+        try {
+          msg = JSON.stringify(xhr.responseJSON, null, 2);
+        } catch(ex) {
+          msg = xhr.responseText;
+        }
+        $('#response-output').text(msg || 'Unknown error').css('border-color', '#dc3545');
+        $('#response-panel').removeClass('d-none');
+      },
+      complete: function() {
+        $btn.prop('disabled', false).text('Execute');
+      }
+    });
+  });
+});
+</script>
+{% endblock %}
