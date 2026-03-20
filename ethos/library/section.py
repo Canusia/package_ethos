@@ -76,9 +76,6 @@ class SectionMixin(EthosBase):
         sections = []
 
         for section in raw_sections:
-            if section['academicPeriod']['code'] != 'FS':
-                continue
-
             class_number = section['code']
             sis_id = section['id']
 
@@ -106,15 +103,23 @@ class SectionMixin(EthosBase):
             max_seats, available_seats = -1, -1
 
             try:
-                faculty_first_name = section['instructorRosterDetails'][0]['instructor']['names'][0]['firstName']
-                faculty_last_name = section['instructorRosterDetails'][0]['instructor']['names'][0]['lastName']
-
-                faculty_sis_id = section['instructorRosterDetails'][0]['instructor']['detail']['id']
-                for k in section['instructorRosterDetails'][0]['instructor']['credentials']:
-                    if k['type'] == 'bannerId':
-                        faculty_id = k['value']
-                    elif k['type'] == 'bannerUserName':
-                        faculty_email = k['value'] + '@stockton.edu'
+                roster = section.get('instructorRosterDetails', [])
+                primary = next(
+                    (r for r in roster if r.get('instructorRole') == 'primary'),
+                    roster[0] if roster else None
+                )
+                if primary:
+                    faculty_first_name = primary['instructor']['names'][0]['firstName']
+                    faculty_last_name = primary['instructor']['names'][0]['lastName']
+                    faculty_sis_id = primary['instructor']['detail']['id']
+                    faculty_id, faculty_email = '', ''
+                    for k in primary['instructor'].get('credentials', []):
+                        if k['type'] == 'bannerId':
+                            faculty_id = k['value']
+                        elif k['type'] == 'bannerUserName':
+                            faculty_email = k['value'] + '@ewu.edu'
+                else:
+                    faculty_first_name, faculty_last_name, faculty_id, faculty_email, faculty_sis_id = '', '', '', '', ''
             except Exception:
                 faculty_first_name, faculty_last_name, faculty_id, faculty_email, faculty_sis_id = '', '', '', '', ''
 
@@ -184,20 +189,23 @@ class SectionMixin(EthosBase):
 
         return sections
 
-    def get_sections(self, term_code, return_type='formatted', **kwargs):
+    def get_sections(self, term_code=None, return_type='formatted', period_id=None, **kwargs):
         """Fetch all sections for a term with pagination.
 
         Args:
-            term_code: Academic period code to filter by.
+            term_code: Academic period code to filter by (looked up to get period_id).
             return_type: 'formatted' runs format_sections, 'raw' returns API data as-is.
+            period_id: Academic period GUID. If provided, skips the term_code lookup.
             **kwargs: Passed to _api_request (e.g. verbose=True).
 
         Returns:
             List of section dicts (formatted or raw).
         """
-        acad_period_id = self.get_academic_period_id(term_code)
+        if period_id is None:
+            period_id = self.get_academic_period_id(term_code)
 
-        criteria = {'reportingAcademicPeriod': {'id': acad_period_id}}
+        criteria = {'academicPeriod': { 'detail': {'id': period_id}}}
+        
         query = urlencode({'criteria': json.dumps(criteria)})
         base_url = f'{self.URL}/api/sections?{query}'
 
@@ -218,7 +226,7 @@ class SectionMixin(EthosBase):
             )
 
             if not resp.ok:
-                logger.error(f'Failed to fetch sections for {term_code}: {resp.status_code} {resp.text}')
+                logger.error(f'Failed to fetch sections for {term_code or period_id}: {resp.status_code} {resp.text}')
                 break
 
             records = resp.json()
