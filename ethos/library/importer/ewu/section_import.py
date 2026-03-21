@@ -162,7 +162,8 @@ class SectionImporter:
 
         # ── f. CLASS SECTION ───────────────────────────────────────────────────
         try:
-            class_number = int(section['code'])
+            # class_number = int(section['code'])
+            class_number = section['code']
         except (KeyError, ValueError):
             logger.warning(f'Skipping section — invalid code: {section.get("code")}')
             counts['section_skipped'] += 1
