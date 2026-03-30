@@ -82,7 +82,7 @@ class Command(BaseCommand):
                 created += 1
             else:
                 changed = False
-                if ethos_id and not course.external_sis_id:
+                if course.external_sis_id != ethos_id:
                     course.external_sis_id = ethos_id
                     changed = True
                 if course.meta != course_data:
