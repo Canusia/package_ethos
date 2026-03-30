@@ -10,7 +10,7 @@ def import_sections_for_term(term_id: str) -> dict:
     """Fetch and import all sections for a term from Ethos. Returns counts dict."""
     from cis.models.term import Term
     from .library.ethos import Ethos
-    from .library.importer import SectionImporter
+    from cis.services.sis_importer import SISImporter as SectionImporter
 
     term = Term.objects.get(pk=term_id)
     period_id = str(term.external_sis_id) if term.external_sis_id else None

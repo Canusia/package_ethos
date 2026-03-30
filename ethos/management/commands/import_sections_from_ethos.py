@@ -234,9 +234,9 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'CSV written to {path} ({len(raw_sections)} rows)'))
 
     def _import(self, raw_sections, skip_certificates, term):
-        from ...library.importer import SectionImporter
+        from cis.services.sis_importer import SISImporter
 
-        counts = SectionImporter().import_sections(raw_sections, term, skip_certificates)
+        counts = SISImporter().import_sections(raw_sections, term, skip_certificates)
 
         for err in counts.get('errors', []):
             self.stdout.write(self.style.ERROR(f'  Error processing section {err["code"]}: {err["error"]}'))
