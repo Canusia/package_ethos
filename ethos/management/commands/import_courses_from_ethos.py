@@ -62,17 +62,18 @@ class Command(BaseCommand):
                 continue
 
             name = f"{cohort.designator} {number}"
+            credit_hours = course_data.get('credits', [{'minimum': 0}])[0].get('minimum', 0) if course_data.get('credits') else 99
 
             course, was_created = Course.objects.get_or_create(
                 cohort=cohort,
                 catalog_number=number,
                 campus=None,
-                credit_hours=course_data.get('credits', [{'minimum': 0}])[0].get('minimum', 0) if course_data.get('credits') else '99',
                 defaults={
                     'name': name,
                     'title': title,
                     'status': 'Inactive',
                     'external_sis_id': ethos_id,
+                    'credit_hours': credit_hours,
                     'meta': course_data,
                 },
             )
@@ -86,6 +87,9 @@ class Command(BaseCommand):
                     changed = True
                 if course.meta != course_data:
                     course.meta = course_data
+                    changed = True
+                if course.credit_hours != credit_hours:
+                    course.credit_hours = credit_hours
                     changed = True
                 if changed:
                     course.save()

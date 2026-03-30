@@ -66,6 +66,7 @@ class SectionImporter:
             return
 
         cohort = Cohort.get_or_add(cohort_designator=subject_abbr, title=subject_title)
+        course_guid = course_data.get('id', '') or None
         course, course_created = Course.objects.get_or_create(
             cohort=cohort,
             catalog_number=catalog_num,
@@ -74,6 +75,7 @@ class SectionImporter:
                 'title': course_title,
                 'name': f'{subject_abbr} {catalog_num}',
                 'status': 'Active',
+                'external_sis_id': course_guid,
             },
         )
         if course_created:
