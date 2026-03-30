@@ -7,7 +7,7 @@ Ellucian Ethos SIS integration client for MyCE. Provides API access to the Ethos
 This package is designed for use as both a **git submodule** (development) and a **pip-installed package** (production). It exposes:
 
 - An `Ethos` API client composed from mixins (academic periods, sections, courses, persons, etc.)
-- Institution-specific section importers under `library/importer/`
+- A section importer adapter (`library/importer/`) that delegates to the host app's `cis.services.sis_importer.SISImporter`
 - Django management commands for CLI-based SIS imports
 - A background task (`import_sections_for_term`) for UI-triggered imports via django-tasks
 - AJAX views for triggering and polling section imports from the term detail page
@@ -64,14 +64,17 @@ else:
     ]
 ```
 
-### 3. Institution Importer Constant (`settings.py`)
+### 3. Section Importer (`cis/services/sis_importer.py`)
+
+Implement a `SISImporter` class in the host app. This package imports it directly:
 
 ```python
-# Selects the institution-specific section importer under ethos/library/importer/
-EXTERNAL_SIS_IMPORTER = 'ewu'
+from cis.services.sis_importer import SISImporter as SectionImporter
 ```
 
-Replace `'ewu'` with your institution's importer slug.
+`SISImporter` must implement `import_sections(raw_sections, term, skip_certificates=False) -> dict`.
+
+The `EXTERNAL_SIS_IMPORTER` settings constant is **no longer used**.
 
 ### 4. URLs (`myce/urls.py`)
 
@@ -93,46 +96,27 @@ This registers:
 | `ce/ethos/sections/import/` | `ethos:ethos_section_import` | Trigger section import |
 | `ce/ethos/sections/import/status/` | `ethos:ethos_section_import_status` | Poll import status |
 
-### 5. Component Registry
+### 5. Term Actions (component registry)
 
-Create per-model component registry files that map action slugs to ethos view handlers. Use `find_spec` to select the correct module path:
+The `trigger_section_import` view in `ethos/views/sections.py` is registered as a term action via `@term_actions.action(...)`. The host app's `cis/views/term.py` must import `ethos.ethos.views.sections` (or `ethos.views.sections`) at module load time to trigger the decorator registration:
 
 ```python
-import importlib.util
-_prefix = 'ethos.ethos' if importlib.util.find_spec('ethos.ethos') else 'ethos'
+import importlib.util as _util
+if _util.find_spec('ethos.ethos'):
+    import ethos.ethos.views.sections  # noqa: F401
+else:
+    import ethos.views.sections  # noqa: F401
 ```
 
-**`myce/component_registry/academic_year.py`**
-```python
-'lookup_guid':            f'{_prefix}.views.academic_periods.lookup_guid'
-'lookup_academic_period': f'{_prefix}.views.academic_periods.lookup_academic_period'
-'create_from_sis':        f'{_prefix}.views.academic_periods.create_from_sis'
-```
-
-**`myce/component_registry/term.py`**
-```python
-'pull_sections': f'{_prefix}.views.sections.trigger_section_import'
-```
-
-**`myce/component_registry/cohort.py`**
-```python
-'lookup_subjects': f'{_prefix}.views.subjects.lookup_subjects'
-'create_from_sis': f'{_prefix}.views.subjects.create_from_sis'
-```
+Academic year and cohort actions are registered via string path handlers in `myce/component_registry/academic_year.py` and `myce/component_registry/cohort.py`.
 
 ---
-
-## Adding a New Institution
-
-1. Create `ethos/library/importer/<institution>/section_import.py` with a `SectionImporter` class implementing `import_sections(raw_sections, term, skip_certificates=False) -> dict`
-2. Set `EXTERNAL_SIS_IMPORTER = '<institution>'` in `myce/settings.py`
 
 ## Configuration
 
 | Setting | Description |
 |---|---|
 | `COLLEAGUE_AUTH_CODE` | Ethos API auth code from Secrets Manager |
-| `EXTERNAL_SIS_IMPORTER` | Institution slug for section importer |
 
 ## Management Commands
 

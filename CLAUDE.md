@@ -32,10 +32,8 @@ ethos/                           ← git submodule root (outer package)
     │   ├── registration.py      # RegistrationMixin
     │   ├── payment.py           # PaymentMixin
     │   ├── section.py           # SectionMixin — get_sections()
-    │   └── importer/            # Institution-specific section importers
-    │       ├── __init__.py      # Reads EXTERNAL_SIS_IMPORTER from settings, exports SectionImporter
-    │       └── ewu/
-    │           └── section_import.py  # EWU SectionImporter
+    │   └── importer/            # Re-exports SectionImporter from host app
+    │       └── __init__.py      # Imports SectionImporter from cis.services.sis_importer
     ├── views/
     │   ├── academic_periods.py  # AcademicYear/Term import from Ethos
     │   ├── sections.py          # trigger_section_import, section_import_status (AJAX)
@@ -56,9 +54,9 @@ See `README.md` for full integration steps. In brief, the host app (`myce/`) mus
 
 1. Add the correct `INSTALLED_APPS` entry (see Dual App Configuration below)
 2. Add ethos `staticfiles/` to `STATICFILES_DIRS` (DEBUG-conditional path)
-3. Set `EXTERNAL_SIS_IMPORTER = '<institution>'` in `settings.py`
+3. Implement `cis.services.sis_importer.SISImporter` — the section importer used by this package
 4. Include `path('ce/ethos/', include('ethos.ethos.urls'))` in `myce/urls.py`
-5. Create component registry files in `myce/component_registry/` with `_prefix`-based handler paths (see README)
+5. Register term actions via `@term_actions.action(...)` in `ethos/views/sections.py`
 
 ## Dual App Configuration
 
@@ -105,19 +103,18 @@ This app depends on `cis` for:
 
 ## Institution-Specific Importers
 
-Section import logic is institution-specific and lives under `library/importer/`. The active importer is selected by `EXTERNAL_SIS_IMPORTER` in `myce/settings.py`:
+Section import logic lives in the **host app** at `cis/services/sis_importer.py` as `SISImporter`. The `library/importer/__init__.py` simply re-exports it:
 
 ```python
-# myce/settings.py
-EXTERNAL_SIS_IMPORTER = 'ewu'
+from cis.services.sis_importer import SISImporter as SectionImporter
 ```
 
-`library/importer/__init__.py` reads this setting and dynamically exports `SectionImporter`. To add a new institution, create `library/importer/<institution>/section_import.py` with a `SectionImporter` class and update the setting.
+`SISImporter` is responsible for:
+- Looking up courses by `external_sis_id` before `get_or_create`
+- Fetching full course details from the Ethos API on creation
+- Saving course `external_sis_id`, `credit_hours`, and `meta` (raw Ethos JSON)
 
-All callers import from the package root:
-```python
-from ethos.ethos.library.importer import SectionImporter
-```
+The `EXTERNAL_SIS_IMPORTER` setting is **no longer used**.
 
 ## Background Tasks
 
