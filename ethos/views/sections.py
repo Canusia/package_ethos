@@ -17,12 +17,16 @@ def trigger_section_import(request):
         return JsonResponse({'outcome': 'alert', 'status': 'error', 'title': 'Error', 'message': 'No term ID provided.'}, status=400)
 
     from ..tasks import import_sections_for_term
+    from django.urls import reverse
     task_result = import_sections_for_term.enqueue(str(term_id))
+    status_url = request.build_absolute_uri(
+        reverse('ethos:ethos_section_import_status') + f'?task_id={task_result.id}'
+    )
     return JsonResponse({
-        'outcome': 'alert',
-        'status': 'success',
-        'title': 'Import Queued',
-        'message': f'Section import has been queued. Task ID: {task_result.id}',
+        'outcome': 'poll',
+        'poll_url': status_url,
+        'title': 'Importing Sections',
+        'message': 'Section import is running…',
     })
 
 
