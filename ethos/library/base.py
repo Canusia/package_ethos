@@ -9,7 +9,7 @@ import logging, requests, json, time
 from django.conf import settings
 import jwt
 
-from cis.models.sis import SIS_Log
+from ..models import EthosLog
 from cis.settings.sis_settings import sis_settings
 
 logger = logging.getLogger(__name__)
@@ -61,20 +61,11 @@ class EthosBase:
             return {}
 
     def _api_request(self, method, url, message_type, description='', data=None, json_data=None, headers=None, **kwargs):
-        """Make an authenticated API request and log it to SIS_Log."""
+        """Make an authenticated API request and log it to EthosLog."""
         token = self.get_auth_token()
         req_headers = {"Authorization": f"Bearer {token}"}
         if headers:
             req_headers.update(headers)
-
-        sis_log = SIS_Log()
-        sis_log.message_type = message_type
-        msg = {'url': url, 'data': data or json_data}
-        if headers:
-            msg['headers'] = headers
-        sis_log.message = msg
-        if description:
-            sis_log.description = description
 
         verbose = kwargs.get('verbose', False)
         if verbose:
@@ -90,10 +81,18 @@ class EthosBase:
         if verbose:
             print(resp.status_code, resp.content)
 
-        sis_log.response = {'status': resp.status_code, 'response': resp.text}
-        sis_log.save()
+        log = EthosLog.objects.create(
+            method=method,
+            url=url,
+            message_type=message_type,
+            description=description,
+            request_headers=headers or {},  # custom headers only — Authorization is never stored
+            request_body=data or json_data,
+            response_status=resp.status_code,
+            response_body=resp.text,
+        )
 
-        return resp, sis_log
+        return resp, log
 
     def _extract_credential(self, record, cred_type='bannerId'):
         """Extract a credential value from a person record by type."""

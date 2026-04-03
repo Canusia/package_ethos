@@ -1,0 +1,111 @@
+{% extends "cis/logged-base.html" %}
+
+{% block title %}Ethos API Logs{% endblock %}
+
+{% block body %}
+<main>
+
+  <div class="row align-items-center mb-3">
+    <div class="col">
+      <h1 class="h3 mb-0 text-gray-800">Ethos API Logs</h1>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <table id="logs_table" class="table table-striped responsive" style="width:100%">
+        <thead>
+          <tr>
+            <th data-data="sent_on"       data-name="sent_on">Sent On</th>
+            <th data-data="method"        data-name="method">Method</th>
+            <th data-data="path"          data-name="path">Path</th>
+            <th data-data="message_type"  data-name="message_type">Type</th>
+            <th data-data="response_status" data-name="response_status">Status</th>
+            <th data-data="id"            data-name="id"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- Log detail modal -->
+<div class="modal fade" id="log-modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-xl" role="document">
+    <div class="modal-content" id="log-modal-content">
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"><span class="sr-only">Loading…</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var METHOD_COLORS = { GET: 'success', POST: 'primary', PUT: 'warning', DELETE: 'danger' };
+
+$(document).ready(function () {
+  var table = $('#logs_table').DataTable({
+    dom: 'B<"float-left mt-3 mb-3"l><"float-right mt-3"f><"row clear">rt<"row"<"col-6"i><"col-6 float-right"p>>',
+    buttons: [
+      { extend: 'csv',   className: 'btn btn-sm btn-primary text-white', text: '<i class="fas fa-file-csv"></i>&nbsp;CSV' },
+      { extend: 'print', className: 'btn btn-sm btn-primary text-white', text: '<i class="fas fa-print"></i>&nbsp;Print' }
+    ],
+    ajax: '{{ api_url }}',
+    serverSide: true,
+    processing: true,
+    lengthMenu: [30, 50, 100],
+    order: [[0, 'desc']],
+    columns: [
+      { render: function (data) { return '<small>' + data + '</small>'; } },
+      {
+        render: function (data) {
+          var cls = METHOD_COLORS[data] || 'secondary';
+          return '<span class="badge badge-' + cls + '">' + data + '</span>';
+        }
+      },
+      { render: function (data) { return '<code style="font-size:0.8rem;">' + data + '</code>'; } },
+      { render: function (data) { return '<span class="text-muted small">' + data + '</span>'; } },
+      {
+        searchable: false,
+        render: function (data, type, row) {
+          if (!data) return '—';
+          var cls = data >= 200 && data < 300 ? 'success' : data >= 400 ? 'danger' : 'warning';
+          return '<span class="badge badge-' + cls + '">' + data + '</span>';
+        }
+      },
+      {
+        searchable: false,
+        orderable: false,
+        render: function (data, type, row) {
+          return '<button class="btn btn-sm btn-outline-secondary detail-btn" data-pk="' + data + '">Details</button>';
+        }
+      }
+    ]
+  });
+
+  setInterval(function () {
+    if (!table.rows('.selected').any()) table.ajax.reload(function () {}, false);
+  }, 60 * 1000);
+
+  $(document).on('click', '.detail-btn', function () {
+    var pk = $(this).data('pk');
+    var url = '/ce/ethos/logs/' + pk + '/';
+    var $modal = $('#log-modal');
+    var $content = $('#log-modal-content');
+
+    $content.html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="sr-only">Loading…</span></div></div>');
+    $modal.modal('show');
+
+    $.ajax({
+      url: url,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      success: function (html) { $content.html(html); },
+      error: function () {
+        $content.html('<div class="modal-header"><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div><div class="modal-body text-danger">Failed to load log details.</div>');
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

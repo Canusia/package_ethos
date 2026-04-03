@@ -4,7 +4,7 @@ PersonMixin — person record CRUD, matching, and credentials.
 
 import logging, requests, json
 
-from cis.models.sis import SIS_Log
+from ..models import EthosLog
 from .base import EthosBase
 
 logger = logging.getLogger(__name__)
@@ -417,23 +417,19 @@ class PersonMixin(EthosBase):
             }
 
             student_as_json = json.dumps(student_as_json)
-            sis_log = SIS_Log()
-            sis_log.message_type = 'person_update_ethnicity'
-            sis_log.message = {
-                'data': student_as_json,
-                'url': url
-            }
-
             resp = requests.put(url, headers=headers, data=student_as_json)
 
             if verbose:
                 print(resp.status_code, resp.content)
 
-            sis_log.response = {
-                'status': resp.status_code,
-                'response': resp.text
-            }
-            sis_log.save()
+            log = EthosLog.objects.create(
+                method='PUT',
+                url=url,
+                message_type='person_update_ethnicity',
+                request_body=student_as_json,
+                response_status=resp.status_code,
+                response_body=resp.text,
+            )
 
             if resp.ok:
                 record = resp.json()
@@ -441,7 +437,7 @@ class PersonMixin(EthosBase):
                 if verbose:
                     print(record)
 
-        return (None, sis_log)
+        return (None, log)
 
     def get_request_status(self, request_id, **kwargs):
         """Check the status of a person matching request."""
@@ -459,20 +455,17 @@ class PersonMixin(EthosBase):
         if verbose:
             print(url)
 
-        sis_log = SIS_Log()
-        sis_log.message_type = 'person_request_status'
-        sis_log.message = {
-            'url': url
-        }
         resp = requests.get(url, headers=headers)
         if verbose:
             print(resp.status_code, resp.content)
 
-        sis_log.response = {
-            'status': resp.status_code,
-            'response': resp.text
-        }
-        sis_log.save()
+        log = EthosLog.objects.create(
+            method='GET',
+            url=url,
+            message_type='person_request_status',
+            response_status=resp.status_code,
+            response_body=resp.text,
+        )
 
         if resp.ok:
             record = resp.json()
@@ -486,10 +479,10 @@ class PersonMixin(EthosBase):
             return (
                 person_id,
                 status,
-                sis_log
+                log
             )
 
-        return (None, None, sis_log)
+        return (None, None, log)
 
     def get_or_create_person(self, student, **kwargs):
         """Find or create a person record via person matching."""

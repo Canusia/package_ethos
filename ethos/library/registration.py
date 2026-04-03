@@ -4,7 +4,7 @@ RegistrationMixin — section registrations, holds, and mirroring.
 
 import logging, requests, json, datetime
 
-from cis.models.sis import SIS_Log
+from ..models import EthosLog
 from .base import EthosBase
 
 logger = logging.getLogger(__name__)
@@ -111,30 +111,21 @@ class RegistrationMixin(EthosBase):
             'Content-Type': 'application/vnd.hedtech.integration.v16+json'
         }
 
-        sis_log = SIS_Log()
-        sis_log.message_type = 'registration_status'
-        sis_log.message = {
-            'data': json_data,
-            'url': url
-        }
+        resp = requests.put(url, headers=headers, json=json_data)
 
-        resp = requests.put(
-            url,
-            headers=headers,
-            json=json_data
+        log = EthosLog.objects.create(
+            method='PUT',
+            url=url,
+            message_type='registration_status',
+            request_body=json_data,
+            response_status=resp.status_code,
+            response_body=resp.text,
         )
 
-        sis_log.response = {
-            'status': resp.status_code,
-            'response': resp.text
-        }
-
-        sis_log.save()
-
         if resp.ok:
-            return (True, sis_log)
+            return (True, log)
 
-        return (False, sis_log)
+        return (False, log)
 
     def update_registration(self, student_sis_id, section_id, status, registration_id):
         """Update a section registration record in Ethos."""
@@ -165,29 +156,20 @@ class RegistrationMixin(EthosBase):
             "statusDate": datetime.datetime.now().strftime("%Y-%m-%d")
         }
 
-        sis_log = SIS_Log()
-        sis_log.message_type = f'class_{status}'
-        sis_log.message = {
-            'data': json_data,
-            'url': url
-        }
+        resp = requests.put(url, headers=headers, json=json_data)
 
-        resp = requests.put(
-            url,
-            headers=headers,
-            json=json_data
+        log = EthosLog.objects.create(
+            method='PUT',
+            url=url,
+            message_type=f'class_{status}',
+            request_body=json_data,
+            response_status=resp.status_code,
+            response_body=resp.text,
         )
 
-        sis_log.response = {
-            'status': resp.status_code,
-            'response': resp.text
-        }
-
-        sis_log.save()
-
         if resp.ok:
-            return (True, sis_log)
-        return (False, sis_log)
+            return (True, log)
+        return (False, log)
 
     def mirror_linked_registrations(self, student_banner_id, term_code, crns):
         """Register multiple linked CRNs together via registration-register."""
@@ -212,46 +194,33 @@ class RegistrationMixin(EthosBase):
                 "courseRegistrationStatus": "RW"
             })
 
-        sis_log = SIS_Log()
-        sis_log.message_type = f'linked_class_register'
-        sis_log.message = {
-            'data': json_data,
-            'url': url
-        }
+        resp = requests.post(url, headers=headers, json=json_data)
 
-        resp = requests.post(
-            url,
-            headers=headers,
-            json=json_data
+        log = EthosLog.objects.create(
+            method='POST',
+            url=url,
+            message_type='linked_class_register',
+            request_body=json_data,
+            response_status=resp.status_code,
+            response_body=resp.text,
         )
 
         if resp.ok:
-            sis_log.response = {
-                'status': resp.status_code,
-                'message': resp.text
-            }
-            sis_log.save()
-
             try:
                 for r in resp.json()['registrations']:
                     if r.get('failureReasons'):
-                        return (False, sis_log, None, None)
+                        return (False, log, None, None)
                     if r.get('statusIndicator') == 'F':
-                        return (False, sis_log, None, None)
+                        return (False, log, None, None)
             except Exception:
                 ...
 
-            if resp.json().get('failedRegistrations') :
-                return (False, sis_log, None, None)
+            if resp.json().get('failedRegistrations'):
+                return (False, log, None, None)
 
-            return (True, sis_log, None, 'registered')
+            return (True, log, None, 'registered')
 
-        sis_log.response = {
-            'status': resp.status_code,
-            'message': resp.text
-        }
-        sis_log.save()
-        return (False, sis_log, None, None)
+        return (False, log, None, None)
 
     def mirror_registration(self, student_sis_id, section_id, status, registration_id=None, section_number=None):
         """Create or update a section registration in Ethos."""
@@ -290,25 +259,16 @@ class RegistrationMixin(EthosBase):
             "statusDate": datetime.datetime.now().strftime("%Y-%m-%d")
         }
 
-        sis_log = SIS_Log()
-        sis_log.message_type = f'class_{status}'
-        sis_log.message = {
-            'data': json_body,
-            'url': url
-        }
+        resp = requests.post(url, headers=headers, json=json_body)
 
-        resp = requests.post(
-            url,
-            headers=headers,
-            json=json_body
+        log = EthosLog.objects.create(
+            method='POST',
+            url=url,
+            message_type=f'class_{status}',
+            request_body=json_body,
+            response_status=resp.status_code,
+            response_body=resp.text,
         )
-
-        sis_log.response = {
-            'status': resp.status_code,
-            'response': resp.text
-        }
-
-        sis_log.save()
 
         if resp.ok:
             try:
@@ -318,6 +278,6 @@ class RegistrationMixin(EthosBase):
                 registration_sis_id = None
                 registration_status = None
 
-            return (True, sis_log, registration_sis_id, registration_status)
+            return (True, log, registration_sis_id, registration_status)
 
-        return (False, sis_log, None, None)
+        return (False, log, None, None)

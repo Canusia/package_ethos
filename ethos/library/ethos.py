@@ -14,13 +14,14 @@ from .payment import PaymentMixin
 from .section import SectionMixin
 from .subjects import SubjectsMixin
 from .courses import CoursesMixin
+from .admin import AdminMixin
 
 
 class Recruiter:
     ...
 
 
-class Ethos(PersonMixin, AcademicMixin, AcademicPeriodsMixin, RegistrationMixin, PaymentMixin, SectionMixin, SubjectsMixin, CoursesMixin):
+class Ethos(PersonMixin, AcademicMixin, AcademicPeriodsMixin, RegistrationMixin, PaymentMixin, SectionMixin, SubjectsMixin, CoursesMixin, AdminMixin):
     """Ellucian Ethos SIS integration client.
 
     Inherits all domain-specific operations from mixins:
@@ -32,6 +33,7 @@ class Ethos(PersonMixin, AcademicMixin, AcademicPeriodsMixin, RegistrationMixin,
     - SectionMixin: section fetching, formatting, messages
     - SubjectsMixin: subjects lookup, filtering, pagination
     - CoursesMixin: courses lookup, filtering, pagination
+    - AdminMixin: admin endpoints (available resources, application registry)
 
     Core infrastructure (auth, API helpers, GUID loading) lives in
     EthosBase, which all mixins inherit from.

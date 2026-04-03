@@ -1,0 +1,62 @@
+{% load templatehelpers %}
+<div class="modal-header">
+  <div>
+    <h5 class="modal-title mb-0">
+      <span class="badge badge-{% if log.method == 'GET' %}success{% elif log.method == 'POST' %}primary{% elif log.method == 'PUT' %}warning{% else %}secondary{% endif %} mr-1">{{ log.method }}</span>
+      <code style="font-size:0.9rem;">{{ log.path }}</code>
+    </h5>
+    <small class="text-muted">{{ log.sent_on|date:"m/d/Y g:i:s A" }} &nbsp;&middot;&nbsp; {{ log.message_type }}</small>
+  </div>
+  <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+</div>
+
+<div class="modal-body">
+  <div class="row">
+
+    <!-- Left: Request -->
+    <div class="col-md-6">
+      <h6 class="text-uppercase text-muted font-weight-bold mb-2" style="font-size:0.7rem; letter-spacing:0.05em;">Request</h6>
+
+      <table class="table table-sm table-borderless mb-3" style="font-size:0.85rem;">
+        <tr><th class="text-muted pl-0" style="width:35%;">Method</th>
+            <td><span class="badge badge-{% if log.method == 'GET' %}success{% elif log.method == 'POST' %}primary{% elif log.method == 'PUT' %}warning{% else %}secondary{% endif %}">{{ log.method }}</span></td></tr>
+        <tr><th class="text-muted pl-0">URL</th>
+            <td><code style="font-size:0.78rem; word-break:break-all;">{{ log.url }}</code></td></tr>
+        <tr><th class="text-muted pl-0">Type</th>
+            <td>{{ log.message_type }}</td></tr>
+        {% if log.description %}
+        <tr><th class="text-muted pl-0">Description</th>
+            <td>{{ log.description }}</td></tr>
+        {% endif %}
+      </table>
+
+      {% if log.request_headers %}
+      <p class="text-muted small font-weight-bold mb-1">Headers</p>
+      <pre class="bg-light border rounded p-2" style="font-size:0.75rem; max-height:150px; overflow:auto;">{{ log.request_headers|pretty_json }}</pre>
+      {% endif %}
+
+      {% if log.request_body %}
+      <p class="text-muted small font-weight-bold mb-1">Body</p>
+      <pre class="bg-light border rounded p-2" style="font-size:0.75rem; max-height:200px; overflow:auto;">{{ log.request_body|pretty_json }}</pre>
+      {% endif %}
+    </div>
+
+    <!-- Right: Response -->
+    <div class="col-md-6">
+      <h6 class="text-uppercase text-muted font-weight-bold mb-2" style="font-size:0.7rem; letter-spacing:0.05em;">Response</h6>
+
+      <p class="mb-2">
+        <span class="badge badge-{% if log.success %}success{% else %}danger{% endif %} mr-1" style="font-size:0.85rem;">{{ log.response_status }}</span>
+        {% if log.success %}<span class="text-success small">OK</span>{% else %}<span class="text-danger small">Error</span>{% endif %}
+      </p>
+
+      {% if log.response_body %}
+      <p class="text-muted small font-weight-bold mb-1">Body</p>
+      <pre class="bg-light border rounded p-2" style="font-size:0.75rem; max-height:400px; overflow:auto;">{{ response_body_fmt }}</pre>
+      {% else %}
+      <p class="text-muted small">No response body.</p>
+      {% endif %}
+    </div>
+
+  </div>
+</div>

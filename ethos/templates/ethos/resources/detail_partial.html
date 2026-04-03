@@ -1,0 +1,83 @@
+<div class="modal-header">
+  <div>
+    <h5 class="modal-title mb-0"><code>{{ resource.name }}</code></h5>
+    <p class="text-muted small mb-0">
+      {{ resource.application.name }}
+      {% for item in resource.application.about %}
+      &nbsp;&middot;&nbsp;
+      <span class="badge badge-secondary">{{ item.name }} {{ item.version }}</span>
+      {% endfor %}
+    </p>
+  </div>
+  <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+</div>
+
+<div class="modal-body p-0">
+  {% with reps=resource.representations.all %}
+  {% if reps %}
+  <div class="table-responsive">
+    <table class="table table-striped table-hover mb-0" style="font-size:0.85rem;">
+      <thead class="thead-light">
+        <tr>
+          <th>X-Media-Type</th>
+          <th>Methods</th>
+          <th>Version</th>
+          <th>Filters</th>
+          <th>Deprecation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rep in reps %}
+        <tr {% if rep.deprecation_notice %}class="table-warning"{% endif %}>
+
+          <td><code style="font-size:0.78rem;">{{ rep.x_media_type }}</code></td>
+
+          <td>
+            {% for m in rep.methods %}
+            <span class="badge badge-{% if m == 'get' %}success{% elif m == 'post' %}primary{% elif m == 'put' %}warning{% elif m == 'delete' %}danger{% else %}secondary{% endif %} mr-1">
+              {{ m|upper }}
+            </span>
+            {% endfor %}
+          </td>
+
+          <td>
+            {% if rep.version %}
+            <span class="badge badge-info">{{ rep.version }}</span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+
+          <td>
+            {% if rep.filters %}
+            <div style="line-height:1.8;">
+              {% for f in rep.filters %}
+              <code class="mr-1" style="font-size:0.75rem; background:#f0f0f0; padding:1px 4px; border-radius:3px;">{{ f }}</code>
+              {% endfor %}
+            </div>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+
+          <td>
+            {% if rep.deprecation_notice %}
+            <span class="badge badge-warning d-block mb-1">Deprecated</span>
+            {% if rep.deprecation_notice.deprecatedOn %}
+            <small class="d-block text-muted">Since: <strong>{{ rep.deprecation_notice.deprecatedOn }}</strong></small>
+            {% endif %}
+            {% if rep.deprecation_notice.sunsetOn %}
+            <small class="d-block text-muted">Sunset: <strong>{{ rep.deprecation_notice.sunsetOn }}</strong></small>
+            {% endif %}
+            {% if rep.deprecation_notice.description %}
+            <small class="d-block text-muted mt-1">{{ rep.deprecation_notice.description }}</small>
+            {% endif %}
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-4 text-muted">No representations recorded.</div>
+  {% endif %}
+  {% endwith %}
+</div>

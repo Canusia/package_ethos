@@ -136,6 +136,20 @@ METHOD_REGISTRY = {
             },
         },
     },
+    'admin': {
+        'label': 'Admin',
+        'methods': {
+            'get_available_resources': {
+                'doc': (
+                    'List all Ethos applications and their available API resources. '
+                    'Returns each application with its name, version info, and the '
+                    'resources it exposes (including supported HTTP methods and media types). '
+                    'No parameters required.'
+                ),
+                'params': [] + _PAGINATION_PARAMS,
+            },
+        },
+    },
 }
 
 # Flat allowlist of permitted method names
