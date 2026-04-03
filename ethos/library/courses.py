@@ -46,7 +46,10 @@ class CoursesMixin(EthosBase):
 
             logger.info(f'Fetching: {url}')
 
-            resp, sis_log = self._api_request('GET', url, 'courses', **kwargs)
+            resp, sis_log = self._api_request(
+                'GET', url, 'courses', 
+                **kwargs
+            )
 
             if not resp.ok:
                 logger.error(f'Failed to fetch courses: {resp.status_code} {resp.text}')
@@ -85,7 +88,13 @@ class CoursesMixin(EthosBase):
         """
         url = self.URL + f'/api/courses/{course_id}'
 
-        resp, sis_log = self._api_request('GET', url, 'courses', **kwargs)
+        resp, sis_log = self._api_request(
+            'GET', url, 'courses', 
+            headers={
+                'Accept': 'application/json',
+            },
+            **kwargs
+        )
 
         if resp.ok:
             return resp.json()

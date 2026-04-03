@@ -69,7 +69,10 @@ class EthosBase:
 
         sis_log = SIS_Log()
         sis_log.message_type = message_type
-        sis_log.message = {'url': url, 'data': data or json_data}
+        msg = {'url': url, 'data': data or json_data}
+        if headers:
+            msg['headers'] = headers
+        sis_log.message = msg
         if description:
             sis_log.description = description
 

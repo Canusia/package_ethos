@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 
 from cis.models.course import Course
+from myce.component_registry.course import course_actions
 
 logger = logging.getLogger(__name__)
 
@@ -57,17 +58,79 @@ def _sync_course(record, ethos):
     return changed, None
 
 
-def update_from_ethos(request):
-    """Fetch the latest course data from Ethos and update local record(s).
-
-    Expects GET with ids[] containing one or more Course IDs.
-    Updates title, credit_hours, meta, and external_sis_id.
-    """
-    ids = request.GET.getlist('ids[]')
+@course_actions.action('sis', label='Lookup by Title', icon='fa fa-search', scope=['bulk'])
+def lookup_by_title(request):
+    """Look up course(s) in Ethos by title and sync matching data."""
+    ids = request.POST.getlist('ids[]')
     if not ids:
         return JsonResponse({
             'outcome': 'alert',
-            'action': 'display',
+            'status': 'error',
+            'title': 'Error',
+            'message': 'No course selected.',
+        })
+
+    from ..library.ethos import Ethos
+    ethos = Ethos()
+
+    lines = []
+    for course_id in ids:
+        record = get_object_or_404(Course, pk=course_id)
+
+        results = ethos.get_courses(title=record.title)
+        course_data = results[0] if results else None
+
+        if course_data is None:
+            lines.append(f'{record.name}: No matching course found in Ethos for title "{record.title}".')
+            continue
+
+        changed = []
+
+        ethos_id = course_data.get('id', '')
+        if ethos_id and record.external_sis_id != ethos_id:
+            record.external_sis_id = ethos_id
+            changed.append('Ethos ID')
+
+        title = course_data.get('title', '')
+        if title and record.title != title:
+            record.title = title
+            changed.append('title')
+
+        credits = course_data.get('credits', [])
+        if credits:
+            credit_hours = credits[0].get('minimum', None)
+            if credit_hours is not None and record.credit_hours != credit_hours:
+                record.credit_hours = credit_hours
+                changed.append('credit hours')
+
+        if record.meta != course_data:
+            record.meta = course_data
+            changed.append('meta')
+
+        if changed:
+            record.save()
+            lines.append(f'{record.name}: updated {", ".join(changed)}.')
+        else:
+            lines.append(f'{record.name}: already up to date.')
+
+    return JsonResponse({
+        'outcome': 'alert',
+        'status': 'success',
+        'title': 'Lookup by Title',
+        'message': '<br>'.join(lines),
+    })
+
+
+@course_actions.action('sis', label='Update from Ethos', icon='fa fa-sync', scope=['detail', 'bulk'])
+def update_from_ethos(request):
+    """Fetch the latest course data from Ethos and update local record(s).
+
+    Updates title, credit_hours, meta, and external_sis_id.
+    """
+    ids = request.POST.getlist('ids[]')
+    if not ids:
+        return JsonResponse({
+            'outcome': 'alert',
             'status': 'error',
             'title': 'Error',
             'message': 'No course selected.',
@@ -89,7 +152,6 @@ def update_from_ethos(request):
 
     return JsonResponse({
         'outcome': 'alert',
-        'action': 'display',
         'status': 'success',
         'title': 'Update from Ethos',
         'message': '<br>'.join(lines),
