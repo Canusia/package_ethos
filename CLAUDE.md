@@ -19,33 +19,53 @@ ethos/                           ← git submodule root (outer package)
 └── ethos/                       ← inner Django app
     ├── __init__.py
     ├── apps.py                  # EthosConfig (prod) + DevEthosConfig (dev)
+    ├── models.py                # EthosLog, EthosApplication, EthosResource, EthosRepresentation
+    ├── serializers.py           # DRF serializers for EthosResource and EthosLog
     ├── tasks.py                 # django-tasks background task: import_sections_for_term
     ├── urls.py                  # All ethos URL patterns (app_name='ethos')
     ├── library/                 # All Ethos API client code
-    │   ├── base.py              # EthosBase — auth, _api_request, GUID loading
+    │   ├── base.py              # EthosBase — auth, _api_request, get_preferred_accept_header
     │   ├── ethos.py             # Ethos class — composes all mixins
-    │   ├── person.py            # PersonMixin
-    │   ├── academic.py          # AcademicMixin — get_sites, get_academic_programs
-    │   ├── academic_periods.py  # AcademicPeriodsMixin
-    │   ├── courses.py           # CoursesMixin
-    │   ├── subjects.py          # SubjectsMixin
-    │   ├── registration.py      # RegistrationMixin
-    │   ├── payment.py           # PaymentMixin
-    │   ├── section.py           # SectionMixin — get_sections()
+    │   ├── person.py            # PersonMixin — person CRUD, matching, credentials
+    │   ├── academic.py          # AcademicMixin — admissions, programs, sites
+    │   ├── academic_periods.py  # AcademicPeriodsMixin — period lookup/pagination
+    │   ├── courses.py           # CoursesMixin — course list + by-id
+    │   ├── subjects.py          # SubjectsMixin — subject list + by-id
+    │   ├── section.py           # SectionMixin — get_sections() paginated
+    │   ├── section_detail.py    # SectionDetailMixin — meeting times, instructors, enrollment, registrations
+    │   ├── student_records.py   # StudentRecordsMixin — student record, programs, standings, registrations
+    │   ├── student_account.py   # StudentAccountMixin — account summary/details, financial aid
+    │   ├── grades.py            # GradesMixin — grade reads + final grade submission
+    │   ├── holds.py             # HoldsMixin — list/get/release person holds
+    │   ├── reference.py         # ReferenceMixin — academic levels, methods, schemes, catalogs, institutions
+    │   ├── registration.py      # RegistrationMixin — section registrations, holds POST, mirroring
+    │   ├── payment.py           # PaymentMixin — fee assessment, FRL, student payments
+    │   ├── admin.py             # AdminMixin — get_available_resources
     │   └── importer/            # Re-exports SectionImporter from host app
     │       └── __init__.py      # Imports SectionImporter from cis.services.sis_importer
     ├── views/
     │   ├── academic_periods.py  # AcademicYear/Term import from Ethos
     │   ├── sections.py          # trigger_section_import, section_import_status (AJAX)
-    │   ├── status.py            # API Explorer — status_page, run_method, METHOD_REGISTRY
+    │   ├── status.py            # API Explorer — status_page, run_method, METHOD_REGISTRY (44 methods)
+    │   ├── resources.py         # EthosResource list/detail/sync views + DRF ViewSet
+    │   └── logs.py              # EthosLog list/detail views + DRF ViewSet
     │   └── subjects.py          # Cohort/Subject import from Ethos
     ├── templates/ethos/
-    │   └── status.html          # API Explorer UI
+    │   ├── status.html          # API Explorer UI
+    │   ├── resources/
+    │   │   ├── index.html       # DataTables resource list with Active Header column
+    │   │   ├── detail.html      # Full-page resource detail with Preferred column
+    │   │   └── detail_partial.html  # Modal partial with Set/Clear AJAX buttons
+    │   └── logs/
+    │       ├── index.html       # DataTables log list with auto-reload
+    │       ├── detail.html      # Full-page log detail
+    │       └── detail_partial.html  # Modal partial
     └── management/commands/
         ├── import_subjects_from_ethos.py
         ├── import_terms_from_ethos.py
         ├── import_courses_from_ethos.py
-        └── import_sections_from_ethos.py
+        ├── import_sections_from_ethos.py
+        └── sync_ethos_resources.py
 ```
 
 ## Host App Integration
@@ -57,6 +77,7 @@ See `README.md` for full integration steps. In brief, the host app (`myce/`) mus
 3. Implement `cis.services.sis_importer.SISImporter` — the section importer used by this package
 4. Include `path('ce/ethos/', include('ethos.ethos.urls'))` in `myce/urls.py`
 5. Register term actions via `@term_actions.action(...)` in `ethos/views/sections.py`
+6. Add the ethos SIS nav group to the CE menu in DB settings (see README)
 
 ## Dual App Configuration
 
@@ -84,8 +105,19 @@ else:
 
 ## Architecture
 
-- **EthosBase** (`base.py`) provides JWT auth (cached with 30s buffer), `_api_request()` helper that logs all calls to `SIS_Log`, and GUID config loading from `sis_settings`.
-- **Mixins** inherit from `EthosBase` and are composed into the `Ethos` class via multiple inheritance (MRO).
+- **EthosBase** (`base.py`) provides JWT auth (cached with 30s buffer), `_api_request()` helper that logs all calls to `EthosLog`, `get_preferred_accept_header(resource_name)` for DB-driven Accept header selection, and GUID config loading from `sis_settings`.
+- **Mixins** inherit from `EthosBase` and are composed into the `Ethos` class via multiple inheritance (MRO). 15 mixins total, 44 methods exposed in the API Explorer.
+- **EthosLog** records every API call with method, URL, request headers/body, response status/body. Never stores the Authorization token.
+- **EthosResource / EthosRepresentation** cache the available API resources from `/admin/available-resources`. Each resource can have a `preferred_representation` FK that overrides the hardcoded Accept header at call time.
+
+## Accept Header Preference
+
+Every mixin method that sends an Accept header calls:
+```python
+accept = self.get_preferred_accept_header('resource-name') or 'application/vnd.hedtech.integration.vN+json'
+```
+
+The preferred header is set per-resource from the UI at `/ce/ethos/resources/<pk>/`.
 
 ## API Base URL
 
@@ -96,10 +128,20 @@ Auth token is a JWT obtained via `POST /auth` with the `COLLEAGUE_AUTH_CODE` fro
 ## Cross-App Dependencies
 
 This app depends on `cis` for:
-- `cis.models.sis.SIS_Log` — API call logging
 - `cis.settings.sis_settings` — GUID configuration
 - `cis.utils.active_term` — current term lookup
 - `cis.validators.validate_ssn` — SSN validation
+- `cis.menu.draw_menu` / `cis.menu.cis_menu` — sidebar menu rendering
+
+## Models & Migrations
+
+Migrations live at `ethos/ethos/migrations/`. App label is `ethos` in both dev and prod modes.
+
+| Migration | What it creates |
+|-----------|----------------|
+| `0001_initial.py` | EthosApplication, EthosResource, EthosRepresentation |
+| `0002_ethoslog.py` | EthosLog |
+| `0003_resource_preferred_representation.py` | preferred_representation FK on EthosResource |
 
 ## Institution-Specific Importers
 
@@ -137,6 +179,7 @@ docker exec django_web_ewu python /app/webapp/manage.py db_worker
 | `import_terms_from_ethos` | Sync academic periods/terms from Ethos |
 | `import_courses_from_ethos` | Sync courses from Ethos (`--create` to write to DB) |
 | `import_sections_from_ethos` | Sync sections for a term from Ethos |
+| `sync_ethos_resources` | Sync available API resources from `/admin/available-resources` |
 
 ### import_sections_from_ethos
 
@@ -164,6 +207,10 @@ The CSV export includes columns: `id`, `course_name`, `highschool`, `section_num
 ### section.py — SectionMixin notes
 
 - `get_sections(term_code=None, period_id=None)` — returns raw Ethos section dicts; pass `period_id` to skip the term code lookup
+
+## Technical Debt
+
+`registration.py` — `update_registration_status`, `update_registration`, `mirror_registration`, and `mirror_linked_registrations` bypass `_api_request` and call `requests` directly, manually creating `EthosLog` entries. These should be refactored to use `_api_request` for consistency.
 
 ## Running Tests
 

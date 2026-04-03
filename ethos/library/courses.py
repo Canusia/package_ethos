@@ -88,11 +88,10 @@ class CoursesMixin(EthosBase):
         """
         url = self.URL + f'/api/courses/{course_id}'
 
+        accept = self.get_preferred_accept_header('courses') or 'application/json'
         resp, sis_log = self._api_request(
-            'GET', url, 'courses', 
-            headers={
-                'Accept': 'application/json',
-            },
+            'GET', url, 'courses',
+            headers={'Accept': accept},
             **kwargs
         )
 

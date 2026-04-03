@@ -159,11 +159,12 @@ class AcademicMixin(EthosBase):
 
         student_as_json = self.studentAcademicProgramJSON(student)
 
+        accept = self.get_preferred_accept_header('student-academic-programs') or 'application/vnd.hedtech.integration.v17+json'
         resp, sis_log = self._api_request(
             'POST', url, 'academic_program',
             data=student_as_json,
             headers={
-                "Accept": "application/vnd.hedtech.integration.v17+json",
+                "Accept": accept,
                 "Content-Type": "application/vnd.hedtech.integration.student-academic-programs-submissions.v1+json",
             },
             **kwargs
@@ -188,11 +189,12 @@ class AcademicMixin(EthosBase):
 
         student_as_json = self.studentAdmissionJSON(student)
 
+        accept = self.get_preferred_accept_header('admission-applications') or 'application/vnd.hedtech.integration.v16+json'
         resp, sis_log = self._api_request(
             'POST', url, 'admission_application',
             data=student_as_json,
             headers={
-                "Accept": "application/vnd.hedtech.integration.v16+json",
+                "Accept": accept,
                 "Content-Type": "application/vnd.hedtech.integration.admission-applications-submissions.v1+json",
             },
             **kwargs
@@ -222,12 +224,13 @@ class AcademicMixin(EthosBase):
             print(url)
             print(body)
 
+        accept = self.get_preferred_accept_header('admission-decisions') or 'application/vnd.hedtech.integration.v11+json'
         resp, sis_log = self._api_request(
             'POST', url, 'admission_decision',
             data=body,
             headers={
-                "Accept": "application/vnd.hedtech.integration.v11+json",
-                "Content-Type": "application/vnd.hedtech.integration.v11+json",
+                "Accept": accept,
+                "Content-Type": accept,
             },
             **kwargs
         )

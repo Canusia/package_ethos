@@ -61,6 +61,13 @@ class EthosResource(models.Model):
         related_name='resources',
     )
     name = models.CharField(max_length=200, db_index=True)  # e.g. "advise-advisor-types"
+    preferred_representation = models.ForeignKey(
+        'EthosRepresentation',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+    )
 
     class Meta:
         unique_together = [('application', 'name')]

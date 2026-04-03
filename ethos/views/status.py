@@ -150,6 +150,216 @@ METHOD_REGISTRY = {
             },
         },
     },
+    'section_detail': {
+        'label': 'Section Detail',
+        'methods': {
+            'get_section_meeting_times': {
+                'doc': 'Return meeting time records for a section GUID.',
+                'params': [
+                    {'name': 'section_id', 'type': 'str', 'required': True, 'placeholder': 'Section Ethos GUID'},
+                ],
+            },
+            'get_section_instructors': {
+                'doc': 'Return instructor assignment records for a section GUID.',
+                'params': [
+                    {'name': 'section_id', 'type': 'str', 'required': True, 'placeholder': 'Section Ethos GUID'},
+                ],
+            },
+            'get_section_enrollment_info': {
+                'doc': 'Return enrollment information (capacity, enrolled count, waitlist) for a section GUID.',
+                'params': [
+                    {'name': 'section_id', 'type': 'str', 'required': True, 'placeholder': 'Section Ethos GUID'},
+                ],
+            },
+            'get_section_registrations': {
+                'doc': 'Return all registration records for a section GUID.',
+                'params': [
+                    {'name': 'section_id', 'type': 'str', 'required': True, 'placeholder': 'Section Ethos GUID'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_section_registration_statuses': {
+                'doc': 'Return the reference list of valid section registration status codes.',
+                'params': [] + _PAGINATION_PARAMS,
+            },
+            'get_section_grade_types': {
+                'doc': 'Return grade types allowed for a section GUID.',
+                'params': [
+                    {'name': 'section_id', 'type': 'str', 'required': True, 'placeholder': 'Section Ethos GUID'},
+                ],
+            },
+        },
+    },
+    'student_records': {
+        'label': 'Student Records',
+        'methods': {
+            'get_student': {
+                'doc': 'Return the core student record for a person GUID.',
+                'params': [
+                    {'name': 'person_id', 'type': 'str', 'required': True, 'placeholder': 'Person Ethos GUID'},
+                ],
+            },
+            'get_student_academic_periods': {
+                'doc': 'Return the academic periods (terms) a student has been active in.',
+                'params': [
+                    {'name': 'person_id', 'type': 'str', 'required': True, 'placeholder': 'Person Ethos GUID'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_student_academic_programs': {
+                'doc': 'Return program enrollments for a student.',
+                'params': [
+                    {'name': 'person_id', 'type': 'str', 'required': True, 'placeholder': 'Person Ethos GUID'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_student_course_registrations': {
+                'doc': 'Return registered courses for a student. Optionally filter by academic period GUID.',
+                'params': [
+                    {'name': 'person_id', 'type': 'str', 'required': True, 'placeholder': 'Person Ethos GUID'},
+                    {'name': 'period_id', 'type': 'str', 'required': False, 'placeholder': 'Academic period GUID (optional)'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_student_academic_standings': {
+                'doc': 'Return academic standing records (GPA standing, satisfactory progress) for a student.',
+                'params': [
+                    {'name': 'person_id', 'type': 'str', 'required': True, 'placeholder': 'Person Ethos GUID'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_enrollment_statuses': {
+                'doc': 'Return the reference list of enrollment status codes (active, withdrawn, etc.).',
+                'params': [] + _PAGINATION_PARAMS,
+            },
+            'get_student_types': {
+                'doc': 'Return the reference list of student type codes (concurrent, transfer, etc.).',
+                'params': [] + _PAGINATION_PARAMS,
+            },
+        },
+    },
+    'student_account': {
+        'label': 'Student Account',
+        'methods': {
+            'get_account_summary': {
+                'doc': 'Return the account summary (balance due, charges, payments) for a student.',
+                'params': [
+                    {'name': 'person_id', 'type': 'str', 'required': True, 'placeholder': 'Person Ethos GUID'},
+                ],
+            },
+            'get_account_details': {
+                'doc': 'Return line-item charges and credits for a student. Optionally filter by academic period.',
+                'params': [
+                    {'name': 'person_id', 'type': 'str', 'required': True, 'placeholder': 'Person Ethos GUID'},
+                    {'name': 'period_id', 'type': 'str', 'required': False, 'placeholder': 'Academic period GUID (optional)'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_account_memos': {
+                'doc': 'Return free-text account memo notes from Banner for a student.',
+                'params': [
+                    {'name': 'person_id', 'type': 'str', 'required': True, 'placeholder': 'Person Ethos GUID'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_financial_aid_awards': {
+                'doc': 'Return financial aid awards for a student. Optionally filter by aid year GUID.',
+                'params': [
+                    {'name': 'person_id', 'type': 'str', 'required': True, 'placeholder': 'Person Ethos GUID'},
+                    {'name': 'aid_year_id', 'type': 'str', 'required': False, 'placeholder': 'Aid year GUID (optional)'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_financial_aid_years': {
+                'doc': 'Return the list of available financial aid years.',
+                'params': [] + _PAGINATION_PARAMS,
+            },
+        },
+    },
+    'grades': {
+        'label': 'Grades',
+        'methods': {
+            'get_student_grades': {
+                'doc': 'Return grade records for a student. Optionally filter by academic period GUID.',
+                'params': [
+                    {'name': 'person_id', 'type': 'str', 'required': True, 'placeholder': 'Person Ethos GUID'},
+                    {'name': 'period_id', 'type': 'str', 'required': False, 'placeholder': 'Academic period GUID (optional)'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_grade_definitions': {
+                'doc': 'Return valid grade values (A, B, C, …). Optionally scoped to a grade scheme GUID.',
+                'params': [
+                    {'name': 'grade_scheme_id', 'type': 'str', 'required': False, 'placeholder': 'Grade scheme GUID (optional)'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_grade_modes': {
+                'doc': 'Return the reference list of grading modes (standard, audit, pass/fail, etc.).',
+                'params': [] + _PAGINATION_PARAMS,
+            },
+            'get_student_gpa': {
+                'doc': 'Return cumulative and period GPA records for a student.',
+                'params': [
+                    {'name': 'person_id', 'type': 'str', 'required': True, 'placeholder': 'Person Ethos GUID'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_section_grade_types': {
+                'doc': 'Return the grade types that apply to a specific section GUID.',
+                'params': [
+                    {'name': 'section_id', 'type': 'str', 'required': True, 'placeholder': 'Section Ethos GUID'},
+                ],
+            },
+        },
+    },
+    'holds': {
+        'label': 'Holds',
+        'methods': {
+            'get_person_holds': {
+                'doc': 'Return all active holds for a person GUID.',
+                'params': [
+                    {'name': 'person_id', 'type': 'str', 'required': True, 'placeholder': 'Person Ethos GUID'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_person_hold': {
+                'doc': 'Return a single hold record by its Ethos GUID.',
+                'params': [
+                    {'name': 'hold_id', 'type': 'str', 'required': True, 'placeholder': 'Hold Ethos GUID'},
+                ],
+            },
+            'get_hold_type_codes': {
+                'doc': 'Return the reference list of all hold type codes.',
+                'params': [] + _PAGINATION_PARAMS,
+            },
+            'get_person_hold_types': {
+                'doc': 'Return the reference list of person-scoped hold types.',
+                'params': [] + _PAGINATION_PARAMS,
+            },
+        },
+    },
+    'reference': {
+        'label': 'Reference Data',
+        'methods': {
+            'get_academic_levels': {
+                'doc': 'Return the list of academic levels (high school, undergrad, grad, etc.).',
+                'params': [] + _PAGINATION_PARAMS,
+            },
+            'get_instructional_methods': {
+                'doc': 'Return the list of instructional methods (online, in-person, hybrid, etc.).',
+                'params': [] + _PAGINATION_PARAMS,
+            },
+            'get_grade_schemes': {
+                'doc': 'Return the list of grade schemes (letter, pass/fail, numeric, etc.).',
+                'params': [] + _PAGINATION_PARAMS,
+            },
+            'get_academic_catalogs': {
+                'doc': 'Return academic catalogs. Optionally filter by academic year GUID.',
+                'params': [
+                    {'name': 'academic_year_id', 'type': 'str', 'required': False, 'placeholder': 'Academic year GUID (optional)'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_educational_institution': {
+                'doc': 'Return a single educational institution record by its Ethos GUID.',
+                'params': [
+                    {'name': 'institution_id', 'type': 'str', 'required': True, 'placeholder': 'Institution Ethos GUID'},
+                ],
+            },
+            'get_educational_institutions': {
+                'doc': 'Search educational institutions. Leave criteria blank to list all.',
+                'params': [] + _PAGINATION_PARAMS,
+            },
+        },
+    },
 }
 
 # Flat allowlist of permitted method names

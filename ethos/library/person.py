@@ -343,12 +343,13 @@ class PersonMixin(EthosBase):
 
         student_as_json = self.studentPersonJSON(student)
 
+        accept = self.get_preferred_accept_header('persons') or 'application/vnd.hedtech.integration.v12.3.0+json'
         resp, sis_log = self._api_request(
             'PUT', url, 'person_update',
             data=student_as_json,
             headers={
-                "Accept": "application/vnd.hedtech.integration.v12.3.0+json",
-                "Content-Type": "application/vnd.hedtech.integration.v12.3.0+json"
+                "Accept": accept,
+                "Content-Type": accept,
             },
             **kwargs
         )
@@ -490,11 +491,12 @@ class PersonMixin(EthosBase):
 
         student_as_json = self.studentJSON(student)
 
+        accept = self.get_preferred_accept_header('person-matching-requests') or 'application/vnd.hedtech.integration.v1+json'
         resp, sis_log = self._api_request(
             'POST', url, 'person_get_or_create',
             data=student_as_json,
             headers={
-                "Accept": "application/vnd.hedtech.integration.v1+json",
+                "Accept": accept,
                 "Content-Type": "application/vnd.hedtech.integration.person-matching-requests-initiations-prospects.v1+json",
             },
             **kwargs
@@ -528,13 +530,14 @@ class PersonMixin(EthosBase):
 
         student_as_json = self.studentExternalEdJSON(student)
 
+        accept = self.get_preferred_accept_header('person-external-education') or 'application/vnd.hedtech.integration.v1+json'
         resp, sis_log = self._api_request(
             'POST', url, 'person_external_education',
             description=f'{student} - {student.id}',
             data=student_as_json,
             headers={
-                "Accept": "application/vnd.hedtech.integration.v1+json",
-                "Content-Type": "application/vnd.hedtech.integration.v1+json",
+                "Accept": accept,
+                "Content-Type": accept,
             },
             **kwargs
         )
@@ -558,13 +561,14 @@ class PersonMixin(EthosBase):
 
         student_as_json = self.studentEmergencyContactJSON(student)
 
+        accept = self.get_preferred_accept_header('person-emergency-contacts') or 'application/vnd.hedtech.integration.v1+json'
         resp, sis_log = self._api_request(
             'POST', url, 'person_emergency_contact',
             description=f'{student} - {student.id}',
             data=student_as_json,
             headers={
-                "Accept": "application/vnd.hedtech.integration.v1+json",
-                "Content-Type": "application/vnd.hedtech.integration.v1+json",
+                "Accept": accept,
+                "Content-Type": accept,
             },
             **kwargs
         )
@@ -588,13 +592,14 @@ class PersonMixin(EthosBase):
 
         student_as_json = self.studentMiscJSON(student)
 
+        accept = self.get_preferred_accept_header('applicant-miscellaneous-items') or 'application/vnd.hedtech.integration.v1+json'
         resp, sis_log = self._api_request(
             'PUT', url, 'misc_items',
             description=f'{student} - {student.id}',
             data=student_as_json,
             headers={
-                "Accept": "application/vnd.hedtech.integration.v1+json",
-                "Content-Type": "application/vnd.hedtech.integration.v1+json",
+                "Accept": accept,
+                "Content-Type": accept,
             },
             **kwargs
         )

@@ -24,7 +24,12 @@ class EthosLogViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 def logs_list(request):
+
+    from cis.menu import cis_menu, draw_menu
+    menu = draw_menu(cis_menu, 'ethos', 'ethos_logs')
+    
     return render(request, 'ethos/logs/index.html', {
+        'menu': menu,
         'api_url': '/ce/ethos/api/ethos-log/?format=datatables',
     })
 

@@ -22,13 +22,14 @@ class PaymentMixin(EthosBase):
         }
 
         url = self.URL + '/api/registration-fee-assessment'
+        accept = self.get_preferred_accept_header('registration-fee-assessment') or 'application/vnd.hedtech.v1+json'
         resp, sis_log = self._api_request(
             'POST', url, 'fee_assessment',
             description=f"{student}",
             json_data=data,
             headers={
                 "Content-Type": "application/json",
-                "Accept": "application/vnd.hedtech.v1+json"
+                "Accept": accept,
             },
             **kwargs
         )
@@ -51,13 +52,14 @@ class PaymentMixin(EthosBase):
         json_payload = self.studentFRLJSON(student_registration)
 
         url = self.URL + '/api/student-payments'
+        accept = self.get_preferred_accept_header('student-payments') or 'application/vnd.hedtech.integration.v16+json'
         resp, sis_log = self._api_request(
             'POST', url, 'student_frl',
             description=f"{student} / {student_registration}",
             data=json_payload,
             headers={
-                "Content-Type": "application/vnd.hedtech.integration.v16+json",
-                "Accept": "application/vnd.hedtech.integration.v16+json"
+                "Content-Type": accept,
+                "Accept": accept,
             }
         )
 
@@ -113,13 +115,14 @@ class PaymentMixin(EthosBase):
         json_payload = self.studentPaymentJSON(transaction)
 
         url = self.URL + '/api/student-payments'
+        accept = self.get_preferred_accept_header('student-payments') or 'application/vnd.hedtech.integration.v16+json'
         resp, sis_log = self._api_request(
             'POST', url, 'student_payment',
             description=f"{student} / {transaction}",
             data=json_payload,
             headers={
-                "Content-Type": "application/vnd.hedtech.integration.v16+json",
-                "Accept": "application/vnd.hedtech.integration.v16+json"
+                "Content-Type": accept,
+                "Accept": accept,
             }
         )
 

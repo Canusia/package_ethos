@@ -7,11 +7,12 @@ class EthosResourceSerializer(serializers.ModelSerializer):
     application_name = serializers.CharField(source='application.name', read_only=True)
     methods = serializers.SerializerMethodField()
     representation_count = serializers.SerializerMethodField()
+    preferred_accept = serializers.SerializerMethodField()
     detail_url = serializers.SerializerMethodField()
 
     class Meta:
         model = EthosResource
-        fields = ['id', 'name', 'application_name', 'methods', 'representation_count', 'detail_url']
+        fields = ['id', 'name', 'application_name', 'methods', 'representation_count', 'preferred_accept', 'detail_url']
         datatables_always_serialize = ['id', 'detail_url']
 
     def get_methods(self, obj):
@@ -26,6 +27,11 @@ class EthosResourceSerializer(serializers.ModelSerializer):
 
     def get_representation_count(self, obj):
         return obj.representations.count()
+
+    def get_preferred_accept(self, obj):
+        if obj.preferred_representation_id:
+            return obj.preferred_representation.x_media_type
+        return None
 
     def get_detail_url(self, obj):
         return f'/ce/ethos/resources/{obj.pk}/'

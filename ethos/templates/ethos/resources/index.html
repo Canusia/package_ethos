@@ -46,6 +46,7 @@
             <th data-data="application_name" data-name="application__name">Application</th>
             <th data-data="methods" data-name="methods">Methods</th>
             <th data-data="representation_count" data-name="representation_count">Representations</th>
+            <th data-data="preferred_accept" data-name="preferred_accept">Active Header</th>
             <th data-data="id" data-name="id"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
@@ -121,6 +122,14 @@ $(document).ready(function () {
       {
         searchable: false,
         orderable: false,
+        render: function (data) {
+          if (!data) return '<span class="text-muted small">—</span>';
+          return '<code class="text-success" style="font-size:0.75rem;">' + data + '</code>';
+        }
+      },
+      {
+        searchable: false,
+        orderable: false,
         render: function (data, type, row) {
           return '<button class="btn btn-sm btn-outline-secondary detail-btn" data-url="' + row.detail_url + '">Details</button>';
         }
@@ -132,6 +141,36 @@ $(document).ready(function () {
     if (!table.rows('.selected').any())
       table.ajax.reload(function () {}, false);
   }, 5000 * 60);
+
+  $('#resource-modal').on('hidden.bs.modal', function () {
+    table.ajax.reload(null, false);
+  });
+
+  $(document).on('click', '.js-set-preferred', function () {
+    var $btn = $(this);
+    var url = $btn.data('url');
+    var repId = $btn.data('rep-id');
+    var reloadUrl = $btn.data('reload-url');
+    var $content = $('#resource-modal-content');
+
+    $btn.prop('disabled', true);
+
+    $.ajax({
+      url: url,
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': $('[name=csrfmiddlewaretoken]').first().val() },
+      data: { representation_id: repId },
+      success: function () {
+        $content.html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="sr-only">Loading…</span></div></div>');
+        $.ajax({
+          url: reloadUrl,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          success: function (html) { $content.html(html); },
+        });
+      },
+      error: function () { $btn.prop('disabled', false); }
+    });
+  });
 
   $(document).on('click', '.detail-btn', function () {
     var url = $(this).data('url');

@@ -1,4 +1,5 @@
 {% extends "cis/logged-base.html" %}
+{% load templatehelpers %}
 
 {% block title %}{{ resource.name }} — Ethos Resource{% endblock %}
 
@@ -25,6 +26,15 @@
       </div>
     </div>
 
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
     <!-- Representations table -->
     <div class="card shadow-sm mb-4">
       <div class="card-header font-weight-bold">
@@ -43,11 +53,12 @@
                 <th>Version</th>
                 <th>Filters</th>
                 <th>Deprecation</th>
+                <th>Preferred</th>
               </tr>
             </thead>
             <tbody>
               {% for rep in reps %}
-              <tr {% if rep.deprecation_notice %}class="table-warning"{% endif %}>
+              <tr {% if resource.preferred_representation_id == rep.pk %}class="table-success"{% elif rep.deprecation_notice %}class="table-warning"{% endif %}>
 
                 <!-- X-Media-Type -->
                 <td><code style="font-size:0.8rem;">{{ rep.x_media_type }}</code></td>
@@ -102,6 +113,24 @@
                   {% endif %}
                   {% else %}
                   <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+
+                <!-- Preferred -->
+                <td>
+                  {% if resource.preferred_representation_id == rep.pk %}
+                  <span class="badge badge-success">Active</span>
+                  <form method="post" action="{% url 'ethos:ethos_resource_set_preferred' resource.pk %}" class="d-inline ml-1">
+                    {% csrf_token %}
+                    <input type="hidden" name="representation_id" value="">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem;">Clear</button>
+                  </form>
+                  {% else %}
+                  <form method="post" action="{% url 'ethos:ethos_resource_set_preferred' resource.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="representation_id" value="{{ rep.pk }}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary" style="font-size:0.75rem;">Set</button>
+                  </form>
                   {% endif %}
                 </td>
 

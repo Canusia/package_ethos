@@ -42,11 +42,10 @@ class SectionMixin(EthosBase):
 
             logger.info(f'Fetching: {url}')
 
+            accept = self.get_preferred_accept_header('sections') or 'application/vnd.hedtech.integration.sections-maximum.v16+json'
             resp, sis_log = self._api_request(
                 'GET', url, 'sections',
-                headers={
-                    'Accept': 'application/vnd.hedtech.integration.sections-maximum.v16+json',
-                },
+                headers={'Accept': accept},
                 **kwargs,
             )
 

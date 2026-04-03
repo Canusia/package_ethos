@@ -5,6 +5,7 @@ Ethos Available Resources — list, detail, sync views, and DRF ViewSet.
 import logging
 
 from django.contrib import messages
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -82,7 +83,7 @@ class EthosResourceViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = EthosResourceSerializer
 
     def get_queryset(self):
-        qs = EthosResource.objects.select_related('application').prefetch_related('representations')
+        qs = EthosResource.objects.select_related('application', 'preferred_representation').prefetch_related('representations')
         app = self.request.GET.get('application')
         if app:
             qs = qs.filter(application__id=app)
@@ -95,8 +96,13 @@ class EthosResourceViewSet(viewsets.ReadOnlyModelViewSet):
 
 def resources_list(request):
     """Render the Ethos resources list page (data loaded via DataTables/DRF)."""
+
+    from cis.menu import cis_menu, draw_menu
+    menu = draw_menu(cis_menu, 'ethos', 'ethos_resources')
+    
     latest_sync = EthosApplication.objects.order_by('-synced_at').values_list('synced_at', flat=True).first()
     return render(request, 'ethos/resources/index.html', {
+        'menu': menu,
         'api_url': '/ce/ethos/api/ethos-resource/?format=datatables',
         'latest_sync': latest_sync,
     })
@@ -121,6 +127,25 @@ def resources_sync(request):
         messages.error(request, f'Sync failed: {exc}')
 
     return redirect('ethos:ethos_resources')
+
+
+@require_POST
+def resource_set_preferred(request, pk):
+    """Save the preferred representation for a resource."""
+    resource = get_object_or_404(EthosResource, pk=pk)
+    rep_id = request.POST.get('representation_id')
+    if rep_id:
+        rep = get_object_or_404(EthosRepresentation, pk=rep_id, resource=resource)
+        resource.preferred_representation = rep
+    else:
+        resource.preferred_representation = None
+    resource.save(update_fields=['preferred_representation'])
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'ok': True})
+
+    messages.success(request, f'Preferred representation updated for {resource.name}.')
+    return redirect('ethos:ethos_resource_detail', pk=pk)
 
 
 def resource_detail(request, pk):

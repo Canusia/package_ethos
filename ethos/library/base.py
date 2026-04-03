@@ -94,6 +94,20 @@ class EthosBase:
 
         return resp, log
 
+    def get_preferred_accept_header(self, resource_name):
+        """Return the preferred x_media_type for a resource, or None if not set."""
+        from ..models import EthosResource
+        try:
+            resource = (EthosResource.objects
+                        .select_related('preferred_representation')
+                        .filter(name=resource_name, preferred_representation__isnull=False)
+                        .first())
+            if resource:
+                return resource.preferred_representation.x_media_type
+        except Exception:
+            pass
+        return None
+
     def _extract_credential(self, record, cred_type='bannerId'):
         """Extract a credential value from a person record by type."""
         credentials = record.get('credentials')

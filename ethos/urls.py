@@ -13,7 +13,7 @@ from .views.sections import (
     trigger_section_import,
     section_import_status,
 )
-from .views.resources import resources_list, resources_sync, resource_detail, EthosResourceViewSet
+from .views.resources import resources_list, resources_sync, resource_detail, resource_set_preferred, EthosResourceViewSet
 from .views.logs import logs_list, log_detail, EthosLogViewSet
 
 app_name = 'ethos'
@@ -44,6 +44,7 @@ urlpatterns = [
     path('resources/', user_passes_test(_has_cis_role, login_url='/')(resources_list), name='ethos_resources'),
     path('resources/sync/', user_passes_test(_has_cis_role, login_url='/')(resources_sync), name='ethos_resources_sync'),
     path('resources/<int:pk>/', user_passes_test(_has_cis_role, login_url='/')(resource_detail), name='ethos_resource_detail'),
+    path('resources/<int:pk>/set-preferred/', user_passes_test(_has_cis_role, login_url='/')(resource_set_preferred), name='ethos_resource_set_preferred'),
 
     path('logs/', user_passes_test(_has_cis_role, login_url='/')(logs_list), name='ethos_logs'),
     path('logs/<int:pk>/', user_passes_test(_has_cis_role, login_url='/')(log_detail), name='ethos_log_detail'),
