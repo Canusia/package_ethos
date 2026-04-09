@@ -50,9 +50,9 @@
 
             <td style="max-width:220px;">
               {% if rep.filters %}
-              <div style="line-height:1.8; word-break:break-word;">
+              <div style="line-height:1.8;">
                 {% for f in rep.filters %}
-                <code class="mr-1" style="font-size:0.75rem; background:#f0f0f0; padding:1px 4px; border-radius:3px;">{{ f }}</code>
+                <code class="d-block" style="font-size:0.75rem; background:#f0f0f0; padding:1px 4px; border-radius:3px; overflow-wrap:anywhere;">{{ f }}</code>
                 {% endfor %}
               </div>
               {% else %}<span class="text-muted">—</span>{% endif %}

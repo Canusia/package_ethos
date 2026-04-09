@@ -94,6 +94,14 @@ class EthosBase:
 
         return resp, log
 
+    def _resolve_accept(self, resource_name, override=None, default='application/json'):
+        """Return the accept header to use, in priority order:
+        explicit override → DB preferred → hardcoded default.
+        """
+        if override:
+            return override
+        return self.get_preferred_accept_header(resource_name) or default
+
     def get_preferred_accept_header(self, resource_name):
         """Return the preferred x_media_type for a resource, or None if not set."""
         from ..models import EthosResource

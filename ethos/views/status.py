@@ -376,7 +376,12 @@ _INT_PARAMS = {'depth', 'offset', 'limit'}
 @require_GET
 def status_page(request):
     registry_json = json.dumps(METHOD_REGISTRY)
+
+    from cis.menu import cis_menu, draw_menu
+    menu = draw_menu(cis_menu, 'ethos', 'ethos_status')
+
     return render(request, 'ethos/status.html', {
+        'menu': menu,
         'registry_json': registry_json,
         'registry': METHOD_REGISTRY,
     })

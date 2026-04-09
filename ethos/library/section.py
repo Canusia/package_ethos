@@ -15,12 +15,14 @@ logger = logging.getLogger(__name__)
 class SectionMixin(EthosBase):
     """Section operations: fetch raw sections from Ethos."""
 
-    def get_sections(self, term_code=None, period_id=None, **kwargs):
+    def get_sections(self, term_code=None, period_id=None, accept=None, criteria=None, **kwargs):
         """Fetch all sections for a term with pagination.
 
         Args:
             term_code: Academic period code to filter by (looked up to get period_id).
             period_id: Academic period GUID. If provided, skips the term_code lookup.
+            accept: Explicit Accept header. Falls back to DB preferred, then hardcoded default.
+            criteria: Explicit criteria dict. Falls back to one derived from the accept header.
             **kwargs: Passed to _api_request (e.g. verbose=True).
 
         Returns:
@@ -29,7 +31,17 @@ class SectionMixin(EthosBase):
         if period_id is None:
             period_id = self.get_academic_period_id(term_code)
 
-        criteria = {'academicPeriod': {'detail': {'id': period_id}}}
+        resolved_accept = self._resolve_accept(
+            'sections',
+            override=accept,
+            default='application/vnd.hedtech.integration.sections-maximum.v16+json',
+        )
+
+        if criteria is None:
+            if 'maximum' in resolved_accept:
+                criteria = {'academicPeriod': {'detail': {'id': period_id}}}
+            else:
+                criteria = {'academicPeriod': {'id': period_id}}
 
         query = urlencode({'criteria': json.dumps(criteria)})
         base_url = f'{self.URL}/api/sections?{query}'
@@ -42,10 +54,9 @@ class SectionMixin(EthosBase):
 
             logger.info(f'Fetching: {url}')
 
-            accept = self.get_preferred_accept_header('sections') or 'application/vnd.hedtech.integration.sections-maximum.v16+json'
             resp, sis_log = self._api_request(
                 'GET', url, 'sections',
-                headers={'Accept': accept},
+                headers={'Accept': resolved_accept},
                 **kwargs,
             )
 
@@ -72,3 +83,34 @@ class SectionMixin(EthosBase):
 
         logger.info(f'Done. Total sections fetched: {len(all_sections)}')
         return all_sections
+
+    def get_section(self, section_id, accept=None, **kwargs):
+        """Fetch a single section by its Ethos GUID.
+
+        Args:
+            section_id: Ethos GUID of the section.
+            accept: Explicit Accept header. Falls back to DB preferred, then hardcoded default.
+            **kwargs: Passed to _api_request (e.g. verbose=True).
+
+        Returns:
+            Section dict, or None if not found.
+        """
+        url = f'{self.URL}/api/sections/{section_id}'
+
+        resolved_accept = self._resolve_accept(
+            'sections',
+            override=accept,
+            default='application/vnd.hedtech.integration.sections-maximum.v16+json',
+        )
+
+        resp, log = self._api_request(
+            'GET', url, 'section',
+            headers={'Accept': resolved_accept},
+            **kwargs,
+        )
+
+        if resp.ok:
+            return resp.json()
+
+        logger.error(f'Failed to fetch section {section_id}: {resp.status_code} {resp.text}')
+        return None
