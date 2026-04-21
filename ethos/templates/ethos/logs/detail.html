@@ -25,7 +25,7 @@
             <tr><th class="text-muted" style="width:30%;">Method</th>
                 <td><span class="badge badge-{% if log.method == 'GET' %}success{% elif log.method == 'POST' %}primary{% elif log.method == 'PUT' %}warning{% else %}secondary{% endif %}">{{ log.method }}</span></td></tr>
             <tr><th class="text-muted">URL</th>
-                <td><code style="word-break:break-all;font-size:0.8rem;">{{ log.url }}</code></td></tr>
+                <td><code style="word-break:break-all;font-size:0.8rem;">{{ log_url }}</code></td></tr>
             <tr><th class="text-muted">Type</th><td>{{ log.message_type }}</td></tr>
             {% if log.description %}
             <tr><th class="text-muted">Description</th><td>{{ log.description }}</td></tr>

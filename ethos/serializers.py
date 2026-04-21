@@ -1,3 +1,5 @@
+from urllib.parse import unquote
+
 from rest_framework import serializers
 
 from .models import EthosLog, EthosResource
@@ -40,7 +42,14 @@ class EthosResourceSerializer(serializers.ModelSerializer):
 class EthosLogSerializer(serializers.ModelSerializer):
     sent_on = serializers.DateTimeField(format='%Y-%m-%d %I:%M %p')
     success = serializers.BooleanField(read_only=True)
-    path    = serializers.CharField(read_only=True)
+    path    = serializers.SerializerMethodField()
+    url     = serializers.SerializerMethodField()
+
+    def get_path(self, obj):
+        return unquote(obj.path or '')
+
+    def get_url(self, obj):
+        return unquote(obj.url or '')
 
     class Meta:
         model = EthosLog

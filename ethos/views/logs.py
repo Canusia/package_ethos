@@ -3,6 +3,7 @@ Ethos API call log — list, detail views and DRF ViewSet.
 """
 
 import json
+from urllib.parse import unquote
 
 from django.shortcuts import get_object_or_404, render
 
@@ -53,5 +54,6 @@ def log_detail(request, pk):
     )
     return render(request, template, {
         'log': log,
+        'log_url': unquote(log.url or ''),
         'response_body_fmt': _parse_response_body(log.response_body),
     })
