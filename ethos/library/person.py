@@ -4,6 +4,8 @@ PersonMixin — person record CRUD, matching, and credentials.
 
 import logging, requests, json
 
+from urllib.parse import urlencode
+
 from ..models import EthosLog
 from .base import EthosBase
 
@@ -685,3 +687,54 @@ class PersonMixin(EthosBase):
                 'other_email': other_email,
             }
         return None
+
+    def lookup_person_by_alternative_credential(self, credential_value, type_id, **kwargs):
+        """
+        Look up a person in Ethos by an alternative credential.
+
+        GET /api/persons?criteria={"alternativeCredentials":[{"type":{"id":<type_id>},"value":<credential_value>}]}
+
+        Returns dict with id, bannerid, username, other_email, raw — or None.
+        """
+        criteria = {
+            'alternativeCredentials': [
+                {'type': {'id': type_id}, 'value': str(credential_value)},
+            ],
+        }
+        url = f'{self.URL}/api/persons?' + urlencode({'criteria': json.dumps(criteria)})
+        accept = self.get_preferred_accept_header('persons') or 'application/json'
+
+        resp, sis_log = self._api_request(
+            'GET', url, 'lookup_person_by_alt_credential',
+            description=f'alt:{type_id}={credential_value}',
+            headers={'Accept': accept},
+            **kwargs,
+        )
+
+        if not resp.ok:
+            return None
+
+        data = resp.json()
+        if not data or not isinstance(data, list):
+            return None
+
+        record = data[0]
+        bannerid = self._extract_credential(record, 'bannerId')
+        username = self._extract_credential(record, 'bannerUserName')
+
+        other_email = None
+        try:
+            for e in record.get('emails') or []:
+                if (e.get('type') or {}).get('emailType') == 'personal':
+                    other_email = (e.get('address') or '').replace('#', '')
+                    break
+        except Exception:
+            other_email = None
+
+        return {
+            'id': record.get('id'),
+            'bannerid': bannerid,
+            'username': username,
+            'other_email': other_email,
+            'raw': record,
+        }
