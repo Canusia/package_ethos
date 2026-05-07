@@ -36,6 +36,34 @@ class EthosLog(models.Model):
     def path(self):
         return self.url.replace(_ETHOS_BASE_URL, '') or self.url
 
+    @property
+    def response_json(self):
+        """Parsed response_body as a dict, or {} on parse failure."""
+        import json
+        if not self.response_body:
+            return {}
+        try:
+            return json.loads(self.response_body)
+        except (ValueError, TypeError):
+            return {}
+
+    @property
+    def error_message(self):
+        """Best-effort short error string from response_body for failed calls."""
+        if self.success:
+            return ''
+        body = self.response_json
+        if isinstance(body, dict):
+            errs = body.get('errors')
+            if isinstance(errs, list) and errs and isinstance(errs[0], dict):
+                msg = errs[0].get('message')
+                if msg:
+                    return str(msg)[:500]
+            msg = body.get('message')
+            if msg:
+                return str(msg)[:500]
+        return (self.response_body or '')[:500]
+
 
 class EthosApplication(models.Model):
     """A top-level Ethos application/integration (e.g. 'CRM Advise Test')."""

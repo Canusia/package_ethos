@@ -175,27 +175,26 @@ class RegistrationMixin(EthosBase):
         return (False, log)
 
     def mirror_linked_registrations(self, student_banner_id, term_code, crns):
-        """Register multiple linked CRNs together via registration-register."""
+        """Register multiple linked CRNs together via registration-register.
+
+        Returns:
+            (success: bool, log: EthosLog)
+        """
         token = self.get_auth_token()
 
         url = self.URL + '/api/registration-register'
-        headers = {
-            "Authorization": f"Bearer {token}",
-        }
+        headers = {"Authorization": f"Bearer {token}"}
 
         json_data = {
             "bannerId": f"{student_banner_id}",
             "term": f"{term_code}",
             "systemIn": "SB",
             "conditionalAddDrop": "N",
-            "courseReferenceNumbers": []
+            "courseReferenceNumbers": [
+                {"courseReferenceNumber": f"{crn}", "courseRegistrationStatus": "RW"}
+                for crn in crns
+            ],
         }
-
-        for crn in crns:
-            json_data['courseReferenceNumbers'].append({
-                "courseReferenceNumber": f"{crn}",
-                "courseRegistrationStatus": "RW"
-            })
 
         resp = requests.post(url, headers=headers, json=json_data)
 
@@ -208,31 +207,33 @@ class RegistrationMixin(EthosBase):
             response_body=resp.text,
         )
 
-        if resp.ok:
-            try:
-                for r in resp.json()['registrations']:
-                    if r.get('failureReasons'):
-                        return (False, log, None, None)
-                    if r.get('statusIndicator') == 'F':
-                        return (False, log, None, None)
-            except Exception:
-                ...
+        if not resp.ok:
+            return (False, log)
 
-            if resp.json().get('failedRegistrations'):
-                return (False, log, None, None)
+        try:
+            payload = resp.json()
+            for r in payload.get('registrations', []):
+                if r.get('failureReasons') or r.get('statusIndicator') == 'F':
+                    return (False, log)
+            if payload.get('failedRegistrations'):
+                return (False, log)
+        except Exception:
+            return (False, log)
 
-            return (True, log, None, 'registered')
-
-        return (False, log, None, None)
+        return (True, log)
 
     def mirror_registration(self, student_sis_id, section_id, status, registration_id=None, section_number=None):
-        """Create or update a section registration in Ethos."""
+        """Create or update a section registration in Ethos.
+
+        Returns:
+            (success: bool, log: EthosLog)
+
+        On a successful CREATE the new section-registration GUID is available
+        as ``log.response_json.get('id')``.
+        """
         if registration_id:
             return self.update_registration(
-                student_sis_id,
-                section_id,
-                status,
-                registration_id
+                student_sis_id, section_id, status, registration_id
             )
 
         token = self.get_auth_token()
@@ -244,25 +245,19 @@ class RegistrationMixin(EthosBase):
         headers = {
             "Authorization": f"Bearer {token}",
             'Accept': 'application/vnd.hedtech.integration.v16+json',
-            'Content-Type': 'application/vnd.hedtech.integration.v16+json'
+            'Content-Type': 'application/vnd.hedtech.integration.v16+json',
         }
 
         json_body = {
-            "id":"00000000-0000-0000-0000-000000000000",
-            "registrant": {
-                "id": student_sis_id
-            },
-            "section": {
-                "id": section_id
-            },
-            "academicLevel": {
-                "id": academic_level_id
-            },
+            "id": "00000000-0000-0000-0000-000000000000",
+            "registrant": {"id": student_sis_id},
+            "section": {"id": section_id},
+            "academicLevel": {"id": academic_level_id},
             "status": {
                 "registrationStatus": status,
-                "sectionRegistrationStatusReason": status
+                "sectionRegistrationStatusReason": status,
             },
-            "statusDate": datetime.datetime.now().strftime("%Y-%m-%d")
+            "statusDate": datetime.datetime.now().strftime("%Y-%m-%d"),
         }
 
         resp = requests.post(url, headers=headers, json=json_body)
@@ -276,14 +271,4 @@ class RegistrationMixin(EthosBase):
             response_body=resp.text,
         )
 
-        if resp.ok:
-            try:
-                registration_sis_id = resp.json().get('id')
-                registration_status = resp.json().get('status', {}).get('registrationStatus')
-            except Exception:
-                registration_sis_id = None
-                registration_status = None
-
-            return (True, log, registration_sis_id, registration_status)
-
-        return (False, log, None, None)
+        return (resp.ok, log)
