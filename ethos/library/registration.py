@@ -131,6 +131,9 @@ class RegistrationMixin(EthosBase):
         """Update a section registration record in Ethos."""
         token = self.get_auth_token()
 
+        guids = self._load_sis_guids()
+        academic_level_id = guids.get('academic_level', {}).get('id', '8ae4bf82-85ce-444f-a9e4-43e65b53829a')
+
         url = self.URL + '/api/section-registrations/' + str(registration_id)
         headers = {
             "Authorization": f"Bearer {token}",
@@ -147,7 +150,7 @@ class RegistrationMixin(EthosBase):
                 "id": str(section_id)
             },
             "academicLevel": {
-                "id": "290e319e-93c6-4421-beab-3ff219b5a0d5"
+                "id": academic_level_id
             },
             "status": {
                 "registrationStatus": "notRegistered",
@@ -234,6 +237,9 @@ class RegistrationMixin(EthosBase):
 
         token = self.get_auth_token()
 
+        guids = self._load_sis_guids()
+        academic_level_id = guids.get('academic_level', {}).get('id', '8ae4bf82-85ce-444f-a9e4-43e65b53829a')
+
         url = self.URL + '/api/section-registrations'
         headers = {
             "Authorization": f"Bearer {token}",
@@ -250,7 +256,7 @@ class RegistrationMixin(EthosBase):
                 "id": section_id
             },
             "academicLevel": {
-                "id": "8ae4bf82-85ce-444f-a9e4-43e65b53829a"
+                "id": academic_level_id
             },
             "status": {
                 "registrationStatus": status,
