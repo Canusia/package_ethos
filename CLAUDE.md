@@ -38,7 +38,7 @@ ethos/                           ← git submodule root (outer package)
     │   ├── grades.py            # GradesMixin — grade reads + final grade submission
     │   ├── holds.py             # HoldsMixin — list/get/release person holds
     │   ├── reference.py         # ReferenceMixin — academic levels, methods, schemes, catalogs, institutions
-    │   ├── registration.py      # RegistrationMixin — section registrations, holds POST, mirroring
+    │   ├── registration.py      # RegistrationMixin — section registrations, holds POST, mirroring (all writes return `(success, log)`)
     │   ├── payment.py           # PaymentMixin — fee assessment, FRL, student payments
     │   ├── admin.py             # AdminMixin — get_available_resources
     │   └── importer/            # Re-exports SectionImporter from host app
@@ -107,7 +107,7 @@ else:
 
 - **EthosBase** (`base.py`) provides JWT auth (cached with 30s buffer), `_api_request()` helper that logs all calls to `EthosLog`, `get_preferred_accept_header(resource_name)` for DB-driven Accept header selection, and GUID config loading from `sis_settings`.
 - **Mixins** inherit from `EthosBase` and are composed into the `Ethos` class via multiple inheritance (MRO). 15 mixins total, 44 methods exposed in the API Explorer.
-- **EthosLog** records every API call with method, URL, request headers/body, response status/body. Never stores the Authorization token.
+- **EthosLog** records every API call with method, URL, request headers/body, response status/body. Never stores the Authorization token. Exposes `response_json` (parsed `response_body` as dict, `{}` on parse failure) and `error_message` (best-effort short error string for failed calls) for callers that need structured response data — e.g. reading the new section-registration GUID from `mirror_registration` via `log.response_json.get('id')`.
 - **EthosResource / EthosRepresentation** cache the available API resources from `/admin/available-resources`. Each resource can have a `preferred_representation` FK that overrides the hardcoded Accept header at call time.
 
 ## Accept Header Preference
@@ -207,6 +207,12 @@ The CSV export includes columns: `id`, `course_name`, `highschool`, `section_num
 ### section.py — SectionMixin notes
 
 - `get_sections(term_code=None, period_id=None)` — returns raw Ethos section dicts; pass `period_id` to skip the term code lookup
+
+## RegistrationMixin return contract
+
+All write methods on `RegistrationMixin` (`update_registration_status`, `update_registration`, `mirror_registration`, `mirror_linked_registrations`) return a uniform `(success: bool, log: EthosLog)` 2-tuple. Callers that need response data (registration GUID, status string, error detail) read it off the log via `log.response_json` / `log.error_message` rather than positional return values.
+
+`mirror_linked_registrations` returns `False` if the response carries `failedRegistrations`, or any registration entry has `failureReasons` or `statusIndicator == 'F'`, or the JSON fails to parse.
 
 ## Technical Debt
 
