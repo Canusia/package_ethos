@@ -738,3 +738,52 @@ class PersonMixin(EthosBase):
             'other_email': other_email,
             'raw': record,
         }
+
+    def lookup_person_by_banner_id(self, banner_id, **kwargs):
+        """
+        Look up a person in Ethos by Banner ID (bannerId credential).
+
+        GET /api/persons?criteria={"credentials":[{"type":"bannerId","value":"<banner_id>"}]}
+
+        Returns dict with id, username, school_email, raw — or None.
+        """
+        criteria = {
+            'credentials': [
+                {'type': 'bannerId', 'value': str(banner_id)},
+            ],
+        }
+        url = f'{self.URL}/api/persons?' + urlencode({'criteria': json.dumps(criteria)})
+        accept = self.get_preferred_accept_header('persons') or 'application/json'
+
+        resp, sis_log = self._api_request(
+            'GET', url, 'lookup_person_by_banner_id',
+            description=f'bannerId={banner_id}',
+            headers={'Accept': accept},
+            **kwargs,
+        )
+
+        if not resp.ok:
+            return None
+
+        data = resp.json()
+        if not data or not isinstance(data, list):
+            return None
+
+        record = data[0]
+        username = self._extract_credential(record, 'bannerUserName')
+
+        school_email = None
+        try:
+            for e in record.get('emails') or []:
+                if (e.get('type') or {}).get('emailType') == 'school':
+                    school_email = (e.get('address') or '').replace('#', '') or None
+                    break
+        except Exception:
+            school_email = None
+
+        return {
+            'id': record.get('id'),
+            'username': username,
+            'school_email': school_email,
+            'raw': record,
+        }
