@@ -9,7 +9,7 @@ This package is designed for use as both a **git submodule** (development) and a
 - An `Ethos` API client composed from 15 mixins (persons, academic, sections, courses, grades, holds, financial, reference data, etc.)
 - Structured API call logging via `EthosLog` model (replaces generic `SIS_Log`)
 - A resource cache (`EthosResource` / `EthosRepresentation`) synced from `/admin/available-resources` with per-resource Accept header preferences
-- A section importer adapter (`library/importer/`) that delegates to the host app's `cis.services.sis_importer.SISImporter`
+- A section importer adapter (`library/importer/`) that delegates to the host app's tenant-provided `SISImporter`, resolved via `cis.services.tenant_services.get_tenant_service('sis_importer')`
 - Django management commands for CLI-based SIS imports
 - A background task (`import_sections_for_term`) for UI-triggered imports via django-tasks
 - AJAX views for triggering and polling section imports from the term detail page
@@ -68,12 +68,13 @@ else:
     ]
 ```
 
-### 3. Section Importer (`cis/services/sis_importer.py`)
+### 3. Section Importer (resolved via `settings.TENANT_SERVICES_APP`)
 
-Implement a `SISImporter` class in the host app. This package imports it directly:
+Provide a `SISImporter` class in the host app's tenant-services app (e.g. `myce_tenant_configs/services/sis_importer.py`) and point `settings.TENANT_SERVICES_APP` at that app. This package resolves it indirectly so it never hard-codes the tenant app name:
 
 ```python
-from cis.services.sis_importer import SISImporter as SectionImporter
+from cis.services.tenant_services import get_tenant_service
+SISImporter = get_tenant_service('sis_importer').SISImporter
 ```
 
 `SISImporter` must implement `import_sections(raw_sections, term, skip_certificates=False) -> dict`.

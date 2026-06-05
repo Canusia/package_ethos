@@ -41,8 +41,8 @@ ethos/                           ← git submodule root (outer package)
     │   ├── registration.py      # RegistrationMixin — section registrations, holds POST, mirroring (all writes return `(success, log)`)
     │   ├── payment.py           # PaymentMixin — fee assessment, FRL, student payments
     │   ├── admin.py             # AdminMixin — get_available_resources
-    │   └── importer/            # Re-exports SectionImporter from host app
-    │       └── __init__.py      # Imports SectionImporter from cis.services.sis_importer
+    │   └── importer/            # Lazily re-exports SectionImporter from host app
+    │       └── __init__.py      # Resolves SISImporter via cis.services.tenant_services (settings.TENANT_SERVICES_APP)
     ├── views/
     │   ├── academic_periods.py  # AcademicYear/Term import from Ethos
     │   ├── sections.py          # trigger_section_import, section_import_status (AJAX)
@@ -74,7 +74,7 @@ See `README.md` for full integration steps. In brief, the host app (`myce/`) mus
 
 1. Add the correct `INSTALLED_APPS` entry (see Dual App Configuration below)
 2. Add ethos `staticfiles/` to `STATICFILES_DIRS` (DEBUG-conditional path)
-3. Implement `cis.services.sis_importer.SISImporter` — the section importer used by this package
+3. Provide a `SISImporter` in the tenant-services app and set `settings.TENANT_SERVICES_APP` to it — this package resolves it via `cis.services.tenant_services.get_tenant_service('sis_importer')`
 4. Include `path('ce/ethos/', include('ethos.ethos.urls'))` in `myce/urls.py`
 5. Register term actions via `@term_actions.action(...)` in `ethos/views/sections.py`
 6. Add the ethos SIS nav group to the CE menu in DB settings (see README)
@@ -128,6 +128,7 @@ Auth token is a JWT obtained via `POST /auth` with the `COLLEAGUE_AUTH_CODE` fro
 ## Cross-App Dependencies
 
 This app depends on `cis` for:
+- `cis.services.tenant_services.get_tenant_service` — resolves the tenant-provided `SISImporter` (settings-indirected)
 - `cis.settings.sis_settings` — GUID configuration
 - `cis.utils.active_term` — current term lookup
 - `cis.validators.validate_ssn` — SSN validation
@@ -145,10 +146,11 @@ Migrations live at `ethos/ethos/migrations/`. App label is `ethos` in both dev a
 
 ## Institution-Specific Importers
 
-Section import logic lives in the **host app** at `cis/services/sis_importer.py` as `SISImporter`. The `library/importer/__init__.py` simply re-exports it:
+Section import logic lives in the **host app's tenant-services app** (e.g. `myce_tenant_configs/services/sis_importer.py`) as `SISImporter`, pointed to by `settings.TENANT_SERVICES_APP`. The `library/importer/__init__.py` lazily re-exports it via a module-level `__getattr__` so this package never imports a tenant-specific app at module-load time:
 
 ```python
-from cis.services.sis_importer import SISImporter as SectionImporter
+from cis.services.tenant_services import get_tenant_service
+SISImporter = get_tenant_service('sis_importer').SISImporter
 ```
 
 `SISImporter` is responsible for:
