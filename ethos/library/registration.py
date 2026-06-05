@@ -3,6 +3,7 @@ RegistrationMixin — section registrations, holds, and mirroring.
 """
 
 import logging, requests, json, datetime
+from urllib.parse import urlencode
 
 from ..models import EthosLog
 from .base import EthosBase
@@ -64,6 +65,51 @@ class RegistrationMixin(EthosBase):
         }
 
         return json.dumps(json_body)
+
+    def get_registration_eligibility(self, student_id, academic_period_id, **kwargs):
+        """Return a student's registration eligibility for an academic period.
+
+        GET /api/student-registration-eligibilities filtered by student +
+        academicPeriod GUIDs. The endpoint returns a list with a single
+        eligibility record; this collapses it to one normalized dict.
+
+        Args:
+            student_id: Ethos GUID of the student (person).
+            academic_period_id: Ethos GUID of the academic period (term).
+
+        Returns:
+            dict with keys eligibility_status, alternate_pin, start_on, end_on,
+            ineligibility_reasons (list, empty when eligible); or None when no
+            record is returned or the request fails.
+        """
+        criteria = {'student': student_id, 'academicPeriod': academic_period_id}
+        url = (f'{self.URL}/api/student-registration-eligibilities?'
+               + urlencode({'criteria': json.dumps(criteria)}))
+        accept = self.get_preferred_accept_header('student-registration-eligibilities') or 'application/json'
+
+        resp, log = self._api_request(
+            'GET', url, 'registration_eligibility',
+            description=f'student {student_id} / period {academic_period_id}',
+            headers={'Accept': accept},
+            **kwargs,
+        )
+
+        if not resp.ok:
+            logger.error('get_registration_eligibility failed: %s %s', resp.status_code, resp.text)
+            return None
+
+        records = resp.json() or []
+        if not records:
+            return None
+
+        record = records[0]
+        return {
+            'eligibility_status': record.get('eligibilityStatus'),
+            'alternate_pin': record.get('alternatePin'),
+            'start_on': record.get('startOn'),
+            'end_on': record.get('endOn'),
+            'ineligibility_reasons': record.get('ineligibilityReasons', []),
+        }
 
     def update_registration_status(self, registration_response, status, section_number):
         """Update a section registration status in Ethos."""

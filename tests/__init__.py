@@ -1,1 +1,2 @@
 from .test_academic_periods import AcademicPeriodsTest
+from .test_registration_eligibility import RegistrationEligibilityTest
