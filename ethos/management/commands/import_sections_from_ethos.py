@@ -234,7 +234,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'CSV written to {path} ({len(raw_sections)} rows)'))
 
     def _import(self, raw_sections, skip_certificates, term):
-        from cis.services.sis_importer import SISImporter
+        from cis.services.tenant_services import get_tenant_service
+        SISImporter = get_tenant_service('sis_importer').SISImporter
 
         counts = SISImporter().import_sections(raw_sections, term, skip_certificates)
 
