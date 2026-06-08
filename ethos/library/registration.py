@@ -318,3 +318,60 @@ class RegistrationMixin(EthosBase):
         )
 
         return (resp.ok, log)
+
+    def create_section_registration(self, registrant_sis_id, section_sis_id, **kwargs):
+        """Self-service section registration: POST /api/section-registrations.
+
+        Mirrors the create branch of ``mirror_registration`` but is used by the
+        student self-registration flow. Returns the package's uniform
+        ``(success, log)`` 2-tuple.
+
+        success is True only when the HTTP call is OK **and** the parsed
+        response carries no top-level ``errors`` array — Ethos sometimes
+        returns HTTP 200 with an ``errors`` array (e.g. prerequisite not met,
+        PERSON.ST record locked). Callers surface
+        ``log.response_json['errors'][0]['message']`` (falling back to
+        ``log.error_message``) to the UI.
+        """
+        token = self.get_auth_token()
+
+        guids = self._load_sis_guids()
+        academic_level_id = guids.get('academic_level', {}).get(
+            'id', '8ae4bf82-85ce-444f-a9e4-43e65b53829a'
+        )
+
+        url = self.URL + '/api/section-registrations'
+        headers = {
+            "Authorization": f"Bearer {token}",
+            'Accept': 'application/vnd.hedtech.integration.v16+json',
+            'Content-Type': 'application/vnd.hedtech.integration.v16+json',
+        }
+
+        json_body = {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "registrant": {"id": str(registrant_sis_id)},
+            "section": {"id": str(section_sis_id)},
+            "academicLevel": {"id": academic_level_id},
+            "status": {
+                "registrationStatus": "registered",
+                "sectionRegistrationStatusReason": "registered",
+            },
+            "statusDate": datetime.datetime.now().strftime("%Y-%m-%d"),
+        }
+
+        resp = requests.post(url, headers=headers, json=json_body)
+
+        log = EthosLog.objects.create(
+            method='POST',
+            url=url,
+            message_type='self_register',
+            request_body=json_body,
+            response_status=resp.status_code,
+            response_body=resp.text,
+        )
+
+        success = bool(resp.ok) and not (
+            isinstance(log.response_json, dict)
+            and log.response_json.get('errors')
+        )
+        return (success, log)
