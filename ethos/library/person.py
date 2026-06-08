@@ -787,3 +787,35 @@ class PersonMixin(EthosBase):
             'school_email': school_email,
             'raw': record,
         }
+
+    def lookup_person_by_colleague_person_id(self, colleague_person_id, **kwargs):
+        """
+        Look up a person in Ethos by Colleague Person ID (colleaguePersonId credential).
+
+        GET /api/persons?criteria={"credentials":[{"type":"colleaguePersonId","value":"<id>"}]}
+
+        Returns the raw Ethos person record dict (first match) — or None.
+        """
+        criteria = {
+            'credentials': [
+                {'type': 'colleaguePersonId', 'value': str(colleague_person_id)},
+            ],
+        }
+        url = f'{self.URL}/api/persons?' + urlencode({'criteria': json.dumps(criteria)})
+        accept = self.get_preferred_accept_header('persons') or 'application/json'
+
+        resp, sis_log = self._api_request(
+            'GET', url, 'lookup_person_by_colleague_person_id',
+            description=f'colleaguePersonId={colleague_person_id}',
+            headers={'Accept': accept},
+            **kwargs,
+        )
+
+        if not resp.ok:
+            return None
+
+        data = resp.json()
+        if not data or not isinstance(data, list):
+            return None
+
+        return data[0]
