@@ -101,3 +101,43 @@ class BannerIdLookupTests(SimpleTestCase):
         resp.ok = False
         mock_api.return_value = (resp, None)
         self.assertIsNone(Ethos().lookup_person_by_banner_id('B123'))
+
+
+class LookupPersonRecordCoreTests(SimpleTestCase):
+    @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
+    @patch.object(Ethos, '_api_request')
+    def test_returns_first_record(self, mock_api, _accept):
+        mock_api.return_value = _ok(RECORD)
+        out = Ethos()._lookup_person_record(
+            {'emails': [{'address': 'a@b.com'}]}, 'mt', description='d')
+        self.assertEqual(out, RECORD)
+
+    @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
+    @patch.object(Ethos, '_api_request')
+    def test_passes_criteria_and_message_type(self, mock_api, _accept):
+        mock_api.return_value = _ok(RECORD)
+        Ethos()._lookup_person_record(
+            {'emails': [{'address': 'a@b.com'}]}, 'my_message', description='d')
+        args = mock_api.call_args.args
+        self.assertEqual(args[0], 'GET')
+        self.assertIn('a%40b.com', args[1])   # url-encoded criteria in the URL
+        self.assertEqual(args[2], 'my_message')
+
+    @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
+    @patch.object(Ethos, '_api_request')
+    def test_not_ok_returns_none(self, mock_api, _accept):
+        resp = MagicMock()
+        resp.ok = False
+        mock_api.return_value = (resp, None)
+        self.assertIsNone(Ethos()._lookup_person_record({'x': 1}, 'mt'))
+
+    @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
+    @patch.object(Ethos, '_api_request')
+    def test_empty_or_non_list_returns_none(self, mock_api, _accept):
+        resp = MagicMock()
+        resp.ok = True
+        resp.json.return_value = []
+        mock_api.return_value = (resp, None)
+        self.assertIsNone(Ethos()._lookup_person_record({'x': 1}, 'mt'))
+        resp.json.return_value = {'not': 'a list'}
+        self.assertIsNone(Ethos()._lookup_person_record({'x': 1}, 'mt'))

@@ -744,6 +744,28 @@ class PersonMixin(EthosBase):
 
         return criteria
 
+    def _lookup_person_record(self, criteria, message_type, description='', **kwargs):
+        """GET /api/persons with `criteria`; return the first matching raw person
+        record dict, or None. Shared core of the lookup_person_by_* helpers."""
+        url = f'{self.URL}/api/persons?' + urlencode({'criteria': json.dumps(criteria)})
+        accept = self.get_preferred_accept_header('persons') or 'application/json'
+
+        resp, sis_log = self._api_request(
+            'GET', url, message_type,
+            description=description,
+            headers={'Accept': accept},
+            **kwargs,
+        )
+
+        if not resp.ok:
+            return None
+
+        data = resp.json()
+        if not data or not isinstance(data, list):
+            return None
+
+        return data[0]
+
     def lookup_person_by_alternative_credential(self, credential_value, type_id, **kwargs):
         """
         Look up a person in Ethos by an alternative credential.
