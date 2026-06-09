@@ -29,6 +29,21 @@ class HoldsMixin(EthosBase):
         logger.error('get_person_holds failed: %s %s', resp.status_code, resp.text)
         return []
 
+    def get_filtered_person_holds(self, person_id, **kwargs):
+        """Return a person's holds filtered to the configured restriction codes.
+
+        Reads `hold_restriction_codes` from the SIS guid settings. If that list is
+        non-empty, only holds whose `restrictionCode` is in the list are returned;
+        if it is absent or empty, all of the person's holds are returned.
+        """
+        holds = self.get_person_holds(person_id, **kwargs)
+        codes = self._load_sis_guids().get('hold_restriction_codes') or []
+        if not codes:
+            return holds
+        allowed = {str(c).strip() for c in codes}
+        return [h for h in holds
+                if (h.get('restrictionCode') or '').strip() in allowed]
+
     def get_person_hold(self, hold_id, **kwargs):
         """Return a single hold record by its Ethos GUID."""
         url = f'{self.URL}/api/person-holds/{hold_id}'
