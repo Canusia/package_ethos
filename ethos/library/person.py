@@ -774,29 +774,16 @@ class PersonMixin(EthosBase):
 
         Returns dict with id, bannerid, username, other_email, raw — or None.
         """
-        criteria = {
-            'alternativeCredentials': [
-                {'type': {'id': type_id}, 'value': str(credential_value)},
-            ],
-        }
-        url = f'{self.URL}/api/persons?' + urlencode({'criteria': json.dumps(criteria)})
-        accept = self.get_preferred_accept_header('persons') or 'application/json'
-
-        resp, sis_log = self._api_request(
-            'GET', url, 'lookup_person_by_alt_credential',
+        record = self._lookup_person_record(
+            self.build_persons_criteria(
+                alt_credential_type_id=type_id, alt_credential_value=credential_value),
+            'lookup_person_by_alt_credential',
             description=f'alt:{type_id}={credential_value}',
-            headers={'Accept': accept},
             **kwargs,
         )
-
-        if not resp.ok:
+        if record is None:
             return None
 
-        data = resp.json()
-        if not data or not isinstance(data, list):
-            return None
-
-        record = data[0]
         bannerid = self._extract_credential(record, 'bannerId')
         username = self._extract_credential(record, 'bannerUserName')
 
@@ -825,29 +812,16 @@ class PersonMixin(EthosBase):
 
         Returns dict with id, username, school_email, raw — or None.
         """
-        criteria = {
-            'credentials': [
-                {'type': 'bannerId', 'value': str(banner_id)},
-            ],
-        }
-        url = f'{self.URL}/api/persons?' + urlencode({'criteria': json.dumps(criteria)})
-        accept = self.get_preferred_accept_header('persons') or 'application/json'
-
-        resp, sis_log = self._api_request(
-            'GET', url, 'lookup_person_by_banner_id',
+        record = self._lookup_person_record(
+            self.build_persons_criteria(
+                credential_type='bannerId', credential_value=banner_id),
+            'lookup_person_by_banner_id',
             description=f'bannerId={banner_id}',
-            headers={'Accept': accept},
             **kwargs,
         )
-
-        if not resp.ok:
+        if record is None:
             return None
 
-        data = resp.json()
-        if not data or not isinstance(data, list):
-            return None
-
-        record = data[0]
         username = self._extract_credential(record, 'bannerUserName')
 
         school_email = None
@@ -874,26 +848,10 @@ class PersonMixin(EthosBase):
 
         Returns the raw Ethos person record dict (first match) — or None.
         """
-        criteria = {
-            'credentials': [
-                {'type': 'colleaguePersonId', 'value': str(colleague_person_id)},
-            ],
-        }
-        url = f'{self.URL}/api/persons?' + urlencode({'criteria': json.dumps(criteria)})
-        accept = self.get_preferred_accept_header('persons') or 'application/json'
-
-        resp, sis_log = self._api_request(
-            'GET', url, 'lookup_person_by_colleague_person_id',
+        return self._lookup_person_record(
+            self.build_persons_criteria(
+                credential_type='colleaguePersonId', credential_value=colleague_person_id),
+            'lookup_person_by_colleague_person_id',
             description=f'colleaguePersonId={colleague_person_id}',
-            headers={'Accept': accept},
             **kwargs,
         )
-
-        if not resp.ok:
-            return None
-
-        data = resp.json()
-        if not data or not isinstance(data, list):
-            return None
-
-        return data[0]
