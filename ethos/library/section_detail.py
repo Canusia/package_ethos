@@ -51,14 +51,25 @@ class SectionDetailMixin(EthosBase):
         return None
 
     def get_section_registrations(self, section_id, **kwargs):
-        """Return all registration records for a section."""
-        criteria = {'section': {'id': section_id}}
+        """Return all registration records for a section (by section GUID)."""
+        return self._get_section_registrations(
+            {'section': {'id': section_id}}, 'section_registrations', **kwargs)
+
+    def get_registrations_for_registrant(self, registrant_id, **kwargs):
+        """Return all section-registration records for a registrant — a student's
+        Ethos person GUID (Student.sis_id)."""
+        return self._get_section_registrations(
+            {'registrant': {'id': registrant_id}}, 'registrant_registrations', **kwargs)
+
+    def _get_section_registrations(self, criteria, message_type, **kwargs):
+        """Shared core: GET /api/section-registrations with `criteria`; return the
+        list of records, or [] on failure."""
         url = f'{self.URL}/api/section-registrations?' + urlencode({'criteria': json.dumps(criteria)})
         accept = self.get_preferred_accept_header('section-registrations') or 'application/vnd.hedtech.integration.v16+json'
-        resp, log = self._api_request('GET', url, 'section_registrations', headers={'Accept': accept}, **kwargs)
+        resp, log = self._api_request('GET', url, message_type, headers={'Accept': accept}, **kwargs)
         if resp.ok:
             return resp.json()
-        logger.error('get_section_registrations failed: %s %s', resp.status_code, resp.text)
+        logger.error('%s failed: %s %s', message_type, resp.status_code, resp.text)
         return []
 
     def get_section_registration_statuses(self, **kwargs):
