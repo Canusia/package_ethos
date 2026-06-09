@@ -688,6 +688,62 @@ class PersonMixin(EthosBase):
             }
         return None
 
+    def build_persons_criteria(self, *, title=None, first_name=None, middle_name=None,
+                               last_name_prefix=None, last_name=None, pedigree=None,
+                               role=None, credential_type=None, credential_value=None,
+                               alt_credential_type_id=None, alt_credential_value=None,
+                               email_address=None):
+        """Build a GET /api/persons `criteria` dict from the supported filters.
+
+        Supported Ethos persons filters (only the non-None ones are included):
+          names.title / firstName / middleName / lastNamePrefix / lastName / pedigree
+          roles.role
+          credentials.type / credentials.value
+          alternativeCredentials.type.id / alternativeCredentials.value
+          emails.address
+        """
+        criteria = {}
+
+        name = {}
+        if title is not None:
+            name['title'] = title
+        if first_name is not None:
+            name['firstName'] = first_name
+        if middle_name is not None:
+            name['middleName'] = middle_name
+        if last_name_prefix is not None:
+            name['lastNamePrefix'] = last_name_prefix
+        if last_name is not None:
+            name['lastName'] = last_name
+        if pedigree is not None:
+            name['pedigree'] = pedigree
+        if name:
+            criteria['names'] = [name]
+
+        if role is not None:
+            criteria['roles'] = [{'role': role}]
+
+        if credential_type is not None or credential_value is not None:
+            cred = {}
+            if credential_type is not None:
+                cred['type'] = credential_type
+            if credential_value is not None:
+                cred['value'] = str(credential_value)
+            criteria['credentials'] = [cred]
+
+        if alt_credential_type_id is not None or alt_credential_value is not None:
+            alt = {}
+            if alt_credential_type_id is not None:
+                alt['type'] = {'id': alt_credential_type_id}
+            if alt_credential_value is not None:
+                alt['value'] = str(alt_credential_value)
+            criteria['alternativeCredentials'] = [alt]
+
+        if email_address is not None:
+            criteria['emails'] = [{'address': email_address}]
+
+        return criteria
+
     def lookup_person_by_alternative_credential(self, credential_value, type_id, **kwargs):
         """
         Look up a person in Ethos by an alternative credential.
