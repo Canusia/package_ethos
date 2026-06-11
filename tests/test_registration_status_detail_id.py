@@ -5,10 +5,8 @@ from django.test import TestCase
 
 try:
     from ethos.ethos.library.ethos import Ethos
-    from ethos.ethos.models import EthosLog
 except ImportError:
     from ethos.library.ethos import Ethos
-    from ethos.models import EthosLog
 
 
 CONFIGURED_STATUSES = [
@@ -189,3 +187,17 @@ class UpdateRegistrationPayloadTests(TestCase):
             )
         sent = mock_put.call_args.kwargs['json']
         self.assertNotIn('detail', sent['status'])
+
+    @patch('ethos.ethos.library.registration.requests.put')
+    def test_update_uses_fallback_registered_guid(self, mock_put):
+        mock_put.return_value = self._fake_response()
+        with patch.object(self.ethos, '_load_sis_guids', return_value={}):
+            self.ethos.update_registration(
+                student_sis_id='S1', section_id='SEC1',
+                status='registered', registration_id='REG1',
+            )
+        sent = mock_put.call_args.kwargs['json']
+        self.assertEqual(
+            sent['status']['detail']['id'],
+            'a4bdb5fe-3568-4b97-ad77-48987c78965f',
+        )

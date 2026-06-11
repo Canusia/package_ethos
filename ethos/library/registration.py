@@ -223,6 +223,8 @@ class RegistrationMixin(EthosBase):
             "registrationStatus": "notRegistered",
             "sectionRegistrationStatusReason": status,
         }
+        # `status` here is the sectionRegistrationStatusReason; the top-level
+        # registrationStatus is always 'notRegistered' on the update path.
         detail_id = self._status_detail_id(status, guids)
         if detail_id:
             status_block["detail"] = {"id": detail_id}
