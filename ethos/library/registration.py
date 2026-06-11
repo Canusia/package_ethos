@@ -219,6 +219,14 @@ class RegistrationMixin(EthosBase):
             'Content-Type': 'application/vnd.hedtech.integration.v16+json'
         }
 
+        status_block = {
+            "registrationStatus": "notRegistered",
+            "sectionRegistrationStatusReason": status,
+        }
+        detail_id = self._status_detail_id(status, guids)
+        if detail_id:
+            status_block["detail"] = {"id": detail_id}
+
         json_data = {
             "id": str(registration_id),
             "registrant": {
@@ -230,10 +238,7 @@ class RegistrationMixin(EthosBase):
             "academicLevel": {
                 "id": academic_level_id
             },
-            "status": {
-                "registrationStatus": "notRegistered",
-                "sectionRegistrationStatusReason": status
-            },
+            "status": status_block,
             "statusDate": datetime.datetime.now().strftime("%Y-%m-%d")
         }
 

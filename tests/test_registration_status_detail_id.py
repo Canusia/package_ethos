@@ -142,3 +142,50 @@ class MirrorRegistrationCreatePayloadTests(TestCase):
             )
         sent = mock_post.call_args.kwargs['json']
         self.assertNotIn('detail', sent['status'])
+
+
+class UpdateRegistrationPayloadTests(TestCase):
+
+    def setUp(self):
+        self.ethos = Ethos()
+        auth = patch.object(self.ethos, 'get_auth_token', return_value='fake')
+        auth.start()
+        self.addCleanup(auth.stop)
+
+    def _fake_response(self):
+        resp = MagicMock()
+        resp.ok = True
+        resp.status_code = 200
+        resp.json.return_value = {'id': 'REG1'}
+        resp.text = '{"id": "REG1"}'
+        return resp
+
+    @patch('ethos.ethos.library.registration.requests.put')
+    def test_update_attaches_detail_id_by_reason_match(self, mock_put):
+        mock_put.return_value = self._fake_response()
+        with patch.object(self.ethos, '_load_sis_guids',
+                          return_value={"section_registration_statuses": CONFIGURED_STATUSES}):
+            self.ethos.update_registration(
+                student_sis_id='S1', section_id='SEC1',
+                status='dropped', registration_id='REG1',
+            )
+        sent = mock_put.call_args.kwargs['json']
+        # registrationStatus stays the literal 'notRegistered' on the update path;
+        # the detail id is resolved via sectionRegistrationStatusReason == status.
+        self.assertEqual(sent['status']['registrationStatus'], 'notRegistered')
+        self.assertEqual(sent['status']['sectionRegistrationStatusReason'], 'dropped')
+        self.assertEqual(
+            sent['status']['detail']['id'],
+            '11111111-2222-3333-4444-555555555555',
+        )
+
+    @patch('ethos.ethos.library.registration.requests.put')
+    def test_update_omits_detail_when_no_match_and_no_default(self, mock_put):
+        mock_put.return_value = self._fake_response()
+        with patch.object(self.ethos, '_load_sis_guids', return_value={}):
+            self.ethos.update_registration(
+                student_sis_id='S1', section_id='SEC1',
+                status='withdrawn', registration_id='REG1',
+            )
+        sent = mock_put.call_args.kwargs['json']
+        self.assertNotIn('detail', sent['status'])
