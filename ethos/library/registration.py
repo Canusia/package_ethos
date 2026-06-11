@@ -14,6 +14,38 @@ logger = logging.getLogger(__name__)
 class RegistrationMixin(EthosBase):
     """Registration operations: holds, status updates, mirroring."""
 
+    # Fallback section-registration status detail GUIDs, used when the
+    # configured `section_registration_statuses` list has no entry whose
+    # status.sectionRegistrationStatusReason matches the requested status.
+    _DEFAULT_STATUS_DETAIL_IDS = {
+        'registered': 'a4bdb5fe-3568-4b97-ad77-48987c78965f',
+    }
+
+    def _status_detail_id(self, status, guids=None):
+        """Resolve the section-registration status detail GUID for `status`.
+
+        Looks up the configured ``section_registration_statuses`` list in the
+        SIS guids settings and returns the ``id`` of the entry whose
+        ``status.sectionRegistrationStatusReason`` equals ``status``. Falls back
+        to ``_DEFAULT_STATUS_DETAIL_IDS`` for known statuses, else ``None``.
+
+        Args:
+            status: the section registration status reason, e.g. 'registered'.
+            guids: optional pre-loaded SIS guids dict; loaded from the DB when
+                omitted.
+        """
+        if guids is None:
+            guids = self._load_sis_guids()
+
+        for entry in guids.get('section_registration_statuses', []) or []:
+            reason = (entry.get('status') or {}).get('sectionRegistrationStatusReason')
+            if reason == status:
+                entry_id = entry.get('id')
+                if entry_id:
+                    return entry_id
+
+        return self._DEFAULT_STATUS_DETAIL_IDS.get(status)
+
     def sendRegistrationHold(self, registration):
         """Submit a financial registration hold to Ethos."""
         json_payload = self.registrationHoldJSON(registration)
