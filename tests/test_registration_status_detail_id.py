@@ -83,3 +83,62 @@ class StatusDetailIdResolverTests(TestCase):
             self.ethos._status_detail_id("registered", guids),
             "a4bdb5fe-3568-4b97-ad77-48987c78965f",
         )
+
+
+class MirrorRegistrationCreatePayloadTests(TestCase):
+
+    def setUp(self):
+        self.ethos = Ethos()
+        auth = patch.object(self.ethos, 'get_auth_token', return_value='fake')
+        auth.start()
+        self.addCleanup(auth.stop)
+
+    def _fake_response(self):
+        resp = MagicMock()
+        resp.ok = True
+        resp.status_code = 201
+        resp.json.return_value = {'id': '00000000-0000-0000-0000-000000000001'}
+        resp.text = '{"id": "00000000-0000-0000-0000-000000000001"}'
+        return resp
+
+    @patch('ethos.ethos.library.registration.requests.post')
+    def test_create_attaches_configured_detail_id(self, mock_post):
+        mock_post.return_value = self._fake_response()
+        with patch.object(self.ethos, '_load_sis_guids',
+                          return_value={"section_registration_statuses": CONFIGURED_STATUSES}):
+            self.ethos.mirror_registration(
+                student_sis_id='S1', section_id='SEC1',
+                status='registered', registration_id=None,
+            )
+        sent = mock_post.call_args.kwargs['json']
+        self.assertEqual(
+            sent['status']['detail']['id'],
+            'd047c950-1f34-4541-8796-837fbffcf745',
+        )
+        self.assertEqual(sent['status']['registrationStatus'], 'registered')
+        self.assertEqual(sent['status']['sectionRegistrationStatusReason'], 'registered')
+
+    @patch('ethos.ethos.library.registration.requests.post')
+    def test_create_uses_fallback_registered_guid(self, mock_post):
+        mock_post.return_value = self._fake_response()
+        with patch.object(self.ethos, '_load_sis_guids', return_value={}):
+            self.ethos.mirror_registration(
+                student_sis_id='S1', section_id='SEC1',
+                status='registered', registration_id=None,
+            )
+        sent = mock_post.call_args.kwargs['json']
+        self.assertEqual(
+            sent['status']['detail']['id'],
+            'a4bdb5fe-3568-4b97-ad77-48987c78965f',
+        )
+
+    @patch('ethos.ethos.library.registration.requests.post')
+    def test_create_omits_detail_when_no_match_and_no_default(self, mock_post):
+        mock_post.return_value = self._fake_response()
+        with patch.object(self.ethos, '_load_sis_guids', return_value={}):
+            self.ethos.mirror_registration(
+                student_sis_id='S1', section_id='SEC1',
+                status='withdrawn', registration_id=None,
+            )
+        sent = mock_post.call_args.kwargs['json']
+        self.assertNotIn('detail', sent['status'])
