@@ -8,11 +8,20 @@ import ethos_sis
 
 class NoDjangoImportTest(unittest.TestCase):
     def test_package_imports_without_django(self):
-        # Simulate Django being unavailable: block it in sys.modules.
-        blocked = {name: None for name in list(sys.modules) if name == "django"
-                   or name.startswith("django.")}
-        saved = {k: sys.modules.get(k) for k in blocked}
-        sys.modules.update(blocked)  # importing django now raises ImportError
+        # Simulate Django being unavailable: unconditionally block `django`
+        # (and any already-imported django.* submodules) in sys.modules,
+        # regardless of whether django was preloaded before this test ran.
+        # Mapping a name to None in sys.modules makes `import <name>` raise
+        # ImportError, which is what gives this guard teeth even when
+        # nothing has imported django yet (e.g. under
+        # `python -m unittest ethos_sis.tests`, where django is never
+        # loaded and the old "only null out what's already present" logic
+        # was a silent no-op).
+        keys_to_block = {"django"} | {
+            name for name in list(sys.modules) if name.startswith("django.")
+        }
+        saved = {k: sys.modules.get(k) for k in keys_to_block}
+        sys.modules.update({k: None for k in keys_to_block})
         try:
             for mod in pkgutil.walk_packages(ethos_sis.__path__,
                                              prefix="ethos_sis."):
