@@ -2,5 +2,5 @@
 
 from .config import Config, load_config
 
-__version__ = "2026.0.18"
+__version__ = "2026.1.0"
 __all__ = ["Config", "load_config", "__version__"]
