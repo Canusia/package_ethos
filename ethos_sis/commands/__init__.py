@@ -16,3 +16,6 @@ COMMAND_MODULES: list = []
 
 from . import subjects  # noqa: E402
 COMMAND_MODULES.append(subjects)
+
+from . import courses  # noqa: E402
+COMMAND_MODULES.append(courses)
