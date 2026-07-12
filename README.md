@@ -219,3 +219,43 @@ docker exec django_web_ewu python /app/webapp/manage.py db_worker
 - The resource browser at `/ce/ethos/resources` shows all available Ethos API resources with their supported methods and representations. Click a row to open the modal detail and set a preferred Accept header.
 - The API log viewer at `/ce/ethos/logs` shows every Ethos API call with request/response details accessible via modal.
 - The API Explorer at `/ce/ethos/status` allows admins to call any of the 44 registered Ethos methods interactively with optional `offset`/`limit` slicing.
+
+## Standalone CLI (`ethos-sis`)
+
+A Django-free command-line client for the Ethos Integration API, installed as `ethos-sis`. It lives in the `ethos_sis/` package beside the Django app and shares no code with it — a clean-room reimplementation of the read/query surface.
+
+### Install & configure
+
+    pip install -e ".[cli]"      # the [cli] extra adds python-dotenv for .env support
+    cp .env.example .env         # then set ETHOS_API_KEY
+
+Configuration is read from environment variables (or a local `.env`):
+
+| Var | Default | Meaning |
+|-----|---------|---------|
+| `ETHOS_API_KEY` | (required) | Ethos Application API key (same value as Django `COLLEAGUE_AUTH_CODE`). |
+| `ETHOS_BASE_URL` | `https://integrate.elluciancloud.com` | API base URL (no trailing slash). |
+| `ETHOS_TIMEOUT` | `30` | Per-request timeout, seconds. |
+| `ETHOS_GUIDS_JSON` | (empty) | Optional JSON map of SIS GUIDs. |
+
+Auth mirrors the Django client: the API key is POSTed to `<base>/auth` as a Bearer token; the response body is the raw JWT, cached until its `exp` claim (minus a 30s buffer).
+
+### Examples
+
+    ethos-sis subjects list --abbreviation MATH
+    ethos-sis academic-periods list --category term
+    ethos-sis sections list --term-code 24/FA --out sections.csv
+    ethos-sis student-records course-registrations --person-id <guid> --json
+    ethos-sis holds list --person-id <guid>
+
+Every command accepts `--json` (raw JSON) and `--out FILE` (CSV); the default is a human-readable table.
+
+Available domains: `subjects`, `courses`, `academic-periods`, `sections`, `section-detail`, `person`, `student-records`, `student-account`, `grades`, `holds`, `reference`, `academic`, `registration`, `admin`.
+
+**Scope:** the CLI is read-only. Write operations (person create/match, registration submit, fee assessment, grade submission, hold release) remain in the Django management commands and are intentionally out of scope.
+
+### Tests
+
+The CLI has its own Django-free `unittest` suite:
+
+    docker exec -w /app/webapp/ethos django_web_ewu python -m unittest discover -s ethos_sis/tests -t . -v
