@@ -43,3 +43,6 @@ COMMAND_MODULES.append(grades)
 
 from . import holds  # noqa: E402
 COMMAND_MODULES.append(holds)
+
+from . import reference  # noqa: E402
+COMMAND_MODULES.append(reference)
