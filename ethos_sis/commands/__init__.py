@@ -19,3 +19,6 @@ COMMAND_MODULES.append(subjects)
 
 from . import courses  # noqa: E402
 COMMAND_MODULES.append(courses)
+
+from . import academic_periods  # noqa: E402
+COMMAND_MODULES.append(academic_periods)
