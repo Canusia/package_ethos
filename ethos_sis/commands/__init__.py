@@ -13,3 +13,6 @@ def add_output_flags(parser) -> None:
 
 # Populated by Phase-2 tasks (import each module and append it here).
 COMMAND_MODULES: list = []
+
+from . import subjects  # noqa: E402
+COMMAND_MODULES.append(subjects)
