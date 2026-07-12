@@ -34,3 +34,6 @@ COMMAND_MODULES.append(person)
 
 from . import student_records  # noqa: E402
 COMMAND_MODULES.append(student_records)
+
+from . import student_account  # noqa: E402
+COMMAND_MODULES.append(student_account)
