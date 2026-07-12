@@ -46,3 +46,6 @@ COMMAND_MODULES.append(holds)
 
 from . import reference  # noqa: E402
 COMMAND_MODULES.append(reference)
+
+from . import academic  # noqa: E402
+COMMAND_MODULES.append(academic)
