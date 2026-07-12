@@ -25,3 +25,6 @@ COMMAND_MODULES.append(academic_periods)
 
 from . import sections  # noqa: E402
 COMMAND_MODULES.append(sections)
+
+from . import section_detail  # noqa: E402
+COMMAND_MODULES.append(section_detail)
