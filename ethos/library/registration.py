@@ -333,8 +333,12 @@ class RegistrationMixin(EthosBase):
             'Content-Type': 'application/vnd.hedtech.integration.v16+json',
         }
 
+        # `registrationStatus` is the two-value enum (registered / notRegistered);
+        # `sectionRegistrationStatusReason` carries the detailed reason
+        # (registered / dropped / withdrawn). Only a 'registered' reason maps to
+        # the registered enum — every other reason is notRegistered.
         status_block = {
-            "registrationStatus": status,
+            "registrationStatus": "registered" if status == "registered" else "notRegistered",
             "sectionRegistrationStatusReason": status,
         }
         detail_id = self._status_detail_id(status, guids)

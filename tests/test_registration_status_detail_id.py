@@ -117,6 +117,37 @@ class MirrorRegistrationCreatePayloadTests(TestCase):
         self.assertEqual(sent['status']['sectionRegistrationStatusReason'], 'registered')
 
     @patch('ethos.ethos.library.registration.requests.post')
+    def test_create_maps_dropped_reason_to_not_registered(self, mock_post):
+        mock_post.return_value = self._fake_response()
+        with patch.object(self.ethos, '_load_sis_guids',
+                          return_value={"section_registration_statuses": CONFIGURED_STATUSES}):
+            self.ethos.mirror_registration(
+                student_sis_id='S1', section_id='SEC1',
+                status='dropped', registration_id=None,
+            )
+        sent = mock_post.call_args.kwargs['json']
+        # A non-registered reason must send registrationStatus='notRegistered',
+        # not the reason itself.
+        self.assertEqual(sent['status']['registrationStatus'], 'notRegistered')
+        self.assertEqual(sent['status']['sectionRegistrationStatusReason'], 'dropped')
+        self.assertEqual(
+            sent['status']['detail']['id'],
+            '11111111-2222-3333-4444-555555555555',
+        )
+
+    @patch('ethos.ethos.library.registration.requests.post')
+    def test_create_maps_withdrawn_reason_to_not_registered(self, mock_post):
+        mock_post.return_value = self._fake_response()
+        with patch.object(self.ethos, '_load_sis_guids', return_value={}):
+            self.ethos.mirror_registration(
+                student_sis_id='S1', section_id='SEC1',
+                status='withdrawn', registration_id=None,
+            )
+        sent = mock_post.call_args.kwargs['json']
+        self.assertEqual(sent['status']['registrationStatus'], 'notRegistered')
+        self.assertEqual(sent['status']['sectionRegistrationStatusReason'], 'withdrawn')
+
+    @patch('ethos.ethos.library.registration.requests.post')
     def test_create_uses_fallback_registered_guid(self, mock_post):
         mock_post.return_value = self._fake_response()
         with patch.object(self.ethos, '_load_sis_guids', return_value={}):
