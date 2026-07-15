@@ -61,6 +61,25 @@ class SectionDetailMixin(EthosBase):
         return self._get_section_registrations(
             {'registrant': {'id': registrant_id}}, 'registrant_registrations', **kwargs)
 
+    def get_section_registration_id(self, registrant_id, section_id, **kwargs):
+        """Resolve the section-registration GUID for a registrant + section pair.
+
+        GET /api/section-registrations filtered by both registrant and section;
+        returns the first matching record's `id`, or None when there is no match.
+
+        Args:
+            registrant_id: the student's Ethos person GUID (Student.sis_id).
+            section_id: the section's Ethos GUID (ClassSection.sis_id).
+        """
+        records = self._get_section_registrations(
+            {'registrant': {'id': registrant_id}, 'section': {'id': section_id}},
+            'section_registration_id',
+            **kwargs,
+        )
+        if records and isinstance(records, list):
+            return records[0].get('id')
+        return None
+
     def _get_section_registrations(self, criteria, message_type, **kwargs):
         """Shared core: GET /api/section-registrations with `criteria`; return the
         list of records, or [] on failure."""
