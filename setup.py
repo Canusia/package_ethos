@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ethos',
-    version='2026.1.1',
+    version='2026.1.2',
     description='Ellucian Ethos SIS integration client for MyCE',
     author='Canusia',
     packages=find_packages(exclude=['tests*', 'ethos_sis.tests*']),
