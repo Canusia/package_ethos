@@ -6,6 +6,7 @@ import json
 from urllib.parse import unquote
 
 from django.shortcuts import get_object_or_404, render
+from django.views.decorators.clickjacking import xframe_options_exempt
 
 from rest_framework import viewsets
 
@@ -45,6 +46,7 @@ def _parse_response_body(text):
         return text
 
 
+@xframe_options_exempt
 def log_detail(request, pk):
     log = get_object_or_404(EthosLog, pk=pk)
     template = (
