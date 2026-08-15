@@ -35,6 +35,10 @@ class EthosMessageViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = EthosMessage.objects.all()
 
     def get_queryset(self):
+        # Two optional narrowing filters, driven by query params rather than
+        # DataTables' own search: they let the list be linked to directly, e.g.
+        # "show me everything that failed" or "just section-registrations",
+        # without the operator having to type into the search box.
         qs = EthosMessage.objects.all()
         resource = self.request.GET.get('resource_name')
         if resource:
@@ -93,7 +97,13 @@ def message_consume(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     message = get_object_or_404(EthosMessage, pk=pk)
+    # force=True because a human pressing this button is an explicit
+    # instruction: it must work on a message that is already `failed` (the
+    # normal re-run after fixing a handler) or `skipped` (a handler was
+    # registered after the message arrived), not just on `pending` ones.
     plan = consume_message(message, force=True)
+    # The service records the outcome on the row; re-read so the panel renders
+    # the status this run just produced rather than the pre-consume one.
     message.refresh_from_db()
     return render(request, 'ethos/messages/_plan.html', {
         'message': message, 'plan': plan, 'dry_run': False,

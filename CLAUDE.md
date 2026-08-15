@@ -211,6 +211,24 @@ mode and orphan the operator's configuration on the move between them. The
 `CONFIGURATORS` `'app'` key does differ per config (`ethos` vs `ethos.ethos`) —
 that one has to.
 
+### Scheduling and CronLog
+
+`poll_ethos_messages` is the only scheduled command. Its `CronTab` row is seeded by
+`install()` and re-pointed whenever the setting is saved, so the schedule is edited
+from the settings UI, never by hand.
+
+When run with `-t/--time` (how `cis.management.commands.cron_jobs` invokes scheduled
+commands) it emits `cron_task_started` / `cron_task_done` from `cis.signals.crontab`,
+so each run appears in CronLog with a summary and a JSON detail blob. Two deliberate
+behaviours: a **disabled** run still emits `done` recording "skipped: polling disabled"
+(a silent no-op is indistinguishable from a broken cron), and a **failed** run emits
+`done` with the error *before* re-raising — Ethos's pointer may already have advanced
+past notifications the run failed to store, so that entry is part of the audit trail
+for what was lost. Manual runs and `--peek` emit nothing.
+
+Nothing else is scheduled: `process_ethos_messages` runs only when chained from a poll,
+and both purge commands are manual.
+
 ### Queue-id monotonicity (open question)
 
 Whether Ethos's `id` continues upward across a fully-drained-then-refilled
@@ -261,7 +279,7 @@ docker exec django_web_ewu python /app/webapp/manage.py db_worker
 | `import_courses_from_ethos` | Sync courses from Ethos (`--create` to write to DB) |
 | `import_sections_from_ethos` | Sync sections for a term from Ethos |
 | `sync_ethos_resources` | Sync available API resources from `/admin/available-resources` |
-| `poll_ethos_messages` | Store notifications off `/consume` into `EthosMessage`; never consumes. `--peek` (HEAD, no side effects), `--limit`, `--max-batches`, `--from-id` (replay) |
+| `poll_ethos_messages` | Store notifications off `/consume` into `EthosMessage`; never consumes (unless "Consume After Polling" is on, when it chains to `process_ethos_messages`). This is the command the `CronTab` row runs. Gated on the `is_active` setting — `--force` for a one-off while off; `--peek` (HEAD, no side effects) works while off too. Also `--limit`, `--max-batches`, `--from-id` (replay), `-t/--time` (supplied by `cron_jobs`; triggers the CronLog signals) |
 | `process_ethos_messages` | Dispatch stored `EthosMessage` rows to their configured handler; never polls. `--dry-run` (plan only, writes nothing), `--resource`, `--id`, `--force`, `--limit` |
 | `purge_ethos_messages` | Delete `EthosMessage` rows past `ETHOS_CONSUME_RETENTION_DAYS` (default 30). `--dry-run`, `--days` |
 | `purge_ethos_logs` | Delete `EthosLog` rows past `ETHOS_LOG_RETENTION_DAYS` (default 90). `--dry-run`, `--days`. **Not scheduled** — nothing purged `EthosLog` before this command existed; the `cis` hourly cron's `purge_sis_logs`/`purge_sis_messages` only touch the legacy `SIS_Log`/`SIS_Subscription` models. |
@@ -339,3 +357,16 @@ treat a run of the bare `ethos.tests` label as a regression signal without
 first confirming which failures are pre-existing.
 
 Tests mock `_api_request` to avoid real API calls.
+
+## Docs in this package
+
+| File | Audience | Purpose |
+|------|----------|---------|
+| `README.md` | Implementers | Install, settings wiring, menu, host integration steps |
+| `docs/polling-change-notifications.md` | Operators / implementers | How the poll works end to end: the scheduled run, turning it on, command and config reference, message lifecycle, CronLog behaviour, troubleshooting |
+| `docs/ethos-change-notifications.md` | Implementers | The verified wire-level `/consume` contract — endpoint, envelope fields, drain semantics |
+| `docs/samples/` | Tests + reference | 27 real CTC notifications, doubling as the test fixture at `ethos/tests/fixtures/` |
+
+When changing the poll, the scheduler, or the operator settings, update
+`docs/polling-change-notifications.md` in the same commit — it is the doc an
+implementer at another tenant will read first.
