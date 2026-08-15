@@ -19,8 +19,15 @@ ethos/                           ← git submodule root (outer package)
 └── ethos/                       ← inner Django app
     ├── __init__.py
     ├── apps.py                  # EthosConfig (prod) + DevEthosConfig (dev)
-    ├── models.py                # EthosLog, EthosApplication, EthosResource, EthosRepresentation
-    ├── serializers.py           # DRF serializers for EthosResource and EthosLog
+    ├── models.py                # EthosLog, EthosApplication, EthosResource, EthosRepresentation, EthosMessage, EthosConsumeCursor
+    ├── serializers.py           # DRF serializers for EthosResource, EthosLog, EthosMessage
+    ├── consume/                 # Change-notification consume framework
+    │   ├── adapter.py           # parse_notification() — the only place that knows Ethos's envelope field names
+    │   ├── config.py            # getattr(settings, ...) accessors for the five ETHOS_CONSUME_* / ETHOS_LOG_RETENTION_DAYS keys
+    │   ├── base.py               # ConsumeHandler protocol — plan()/apply(), Plan/Change/Result dataclasses
+    │   ├── registry.py           # get_handler(resource_name) — resolves ETHOS_CONSUME_HANDLERS dotted paths
+    │   ├── poller.py             # poll() — drains /consume into EthosMessage, advances EthosConsumeCursor atomically
+    │   └── service.py            # consume_message() — dispatches one stored EthosMessage to its handler
     ├── tasks.py                 # django-tasks background task: import_sections_for_term
     ├── urls.py                  # All ethos URL patterns (app_name='ethos')
     ├── library/                 # All Ethos API client code
@@ -48,7 +55,8 @@ ethos/                           ← git submodule root (outer package)
     │   ├── sections.py          # trigger_section_import, section_import_status (AJAX)
     │   ├── status.py            # API Explorer — status_page, run_method, METHOD_REGISTRY (44 methods)
     │   ├── resources.py         # EthosResource list/detail/sync views + DRF ViewSet
-    │   └── logs.py              # EthosLog list/detail views + DRF ViewSet
+    │   ├── logs.py              # EthosLog list/detail views + DRF ViewSet
+    │   ├── messages.py          # EthosMessage list/detail views + dry-run/consume actions + DRF ViewSet
     │   └── subjects.py          # Cohort/Subject import from Ethos
     ├── templates/ethos/
     │   ├── status.html          # API Explorer UI
@@ -56,16 +64,25 @@ ethos/                           ← git submodule root (outer package)
     │   │   ├── index.html       # DataTables resource list with Active Header column
     │   │   ├── detail.html      # Full-page resource detail with Preferred column
     │   │   └── detail_partial.html  # Modal partial with Set/Clear AJAX buttons
-    │   └── logs/
-    │       ├── index.html       # DataTables log list with auto-reload
-    │       ├── detail.html      # Full-page log detail
-    │       └── detail_partial.html  # Modal partial
+    │   ├── logs/
+    │   │   ├── index.html       # DataTables log list with auto-reload
+    │   │   ├── detail.html      # Full-page log detail
+    │   │   └── detail_partial.html  # Modal partial
+    │   └── messages/
+    │       ├── index.html       # DataTables message list (queue_id, resource, status, action)
+    │       ├── detail.html      # Full-page message detail — raw payload + extracted envelope + consume result
+    │       ├── detail_partial.html  # Modal partial
+    │       └── _plan.html       # Renders a Plan (action/summary/changes) for dry-run and consume results
     └── management/commands/
         ├── import_subjects_from_ethos.py
         ├── import_terms_from_ethos.py
         ├── import_courses_from_ethos.py
         ├── import_sections_from_ethos.py
-        └── sync_ethos_resources.py
+        ├── sync_ethos_resources.py
+        ├── poll_ethos_messages.py       # GET/HEAD /consume -> stores EthosMessage rows; --peek, --from-id, --max-batches
+        ├── process_ethos_messages.py    # Dispatches stored EthosMessage rows to handlers; --dry-run, --resource, --id, --force
+        ├── purge_ethos_messages.py      # Deletes EthosMessage rows past ETHOS_CONSUME_RETENTION_DAYS
+        └── purge_ethos_logs.py          # Deletes EthosLog rows past ETHOS_LOG_RETENTION_DAYS
 ```
 
 ## Host App Integration
@@ -143,6 +160,37 @@ Migrations live at `ethos/ethos/migrations/`. App label is `ethos` in both dev a
 | `0001_initial.py` | EthosApplication, EthosResource, EthosRepresentation |
 | `0002_ethoslog.py` | EthosLog |
 | `0003_resource_preferred_representation.py` | preferred_representation FK on EthosResource |
+| `0004_ethosconsumecursor_ethosmessage.py` | EthosMessage, EthosConsumeCursor |
+
+### EthosMessage / EthosConsumeCursor
+
+`EthosMessage` is one stored Ethos change-notification plus its consume result
+(single, overwritten on re-run — not a history log). Envelope fields
+(`queue_id`, `published_on`, `resource_name`, `resource_id`,
+`resource_version`, `operation`, `content_type`, `message_type`,
+`sis_message_id`, `initiated_on`, `publisher_id`) are extracted by
+`consume/adapter.py`; `payload` holds the notification verbatim so nothing is
+lost even if extraction is wrong. `status` is one of `pending`, `consumed`,
+`failed`, `skipped`, `flagged`. `queue_id` is intentionally **not**
+`unique=True` at the DB layer — see "Queue-id monotonicity" below.
+
+`EthosConsumeCursor` is a one-row singleton (`.load()` gets-or-creates it)
+holding `last_processed_id` and `last_polled_at`. It is a real table rather
+than `MAX(queue_id)` over `EthosMessage` because retention purges delete rows;
+a cursor derived from a purged table would replay the whole retention window
+after the first purge.
+
+### Queue-id monotonicity (open question)
+
+Whether Ethos's `id` continues upward across a fully-drained-then-refilled
+queue, or restarts, was not yet confirmed against a real tenant queue at the
+time this was written (see the plan's "Verification Against Reality" section).
+`poller.py` currently assumes upward-only ids and checks duplicates with
+`exists()`-then-`create()` rather than `get_or_create()`. If ids are confirmed
+to continue upward, add `unique=True` on `queue_id` in a follow-up migration.
+If they are found to restart, do **not** — `get_or_create(queue_id=...)` would
+then silently drop new messages after a restart, and the dedupe key would need
+to change to `(resource_id, published_on)` with a cursor that tolerates reset.
 
 ## Institution-Specific Importers
 
@@ -182,6 +230,28 @@ docker exec django_web_ewu python /app/webapp/manage.py db_worker
 | `import_courses_from_ethos` | Sync courses from Ethos (`--create` to write to DB) |
 | `import_sections_from_ethos` | Sync sections for a term from Ethos |
 | `sync_ethos_resources` | Sync available API resources from `/admin/available-resources` |
+| `poll_ethos_messages` | Store notifications off `/consume` into `EthosMessage`; never consumes. `--peek` (HEAD, no side effects), `--limit`, `--max-batches`, `--from-id` (replay) |
+| `process_ethos_messages` | Dispatch stored `EthosMessage` rows to their configured handler; never polls. `--dry-run` (plan only, writes nothing), `--resource`, `--id`, `--force`, `--limit` |
+| `purge_ethos_messages` | Delete `EthosMessage` rows past `ETHOS_CONSUME_RETENTION_DAYS` (default 30). `--dry-run`, `--days` |
+| `purge_ethos_logs` | Delete `EthosLog` rows past `ETHOS_LOG_RETENTION_DAYS` (default 90). `--dry-run`, `--days`. **Not scheduled** — nothing purged `EthosLog` before this command existed; the `cis` hourly cron's `purge_sis_logs`/`purge_sis_messages` only touch the legacy `SIS_Log`/`SIS_Subscription` models. |
+
+## Change-Notification Consume Framework
+
+See `README.md`'s "Change Notifications" section for the command reference,
+settings table, and the `GET /consume` queue-pointer operational note. In
+brief: `poll_ethos_messages` (capture, via `consume/poller.py`) and
+`process_ethos_messages` (dispatch, via `consume/service.py`) are independent
+— polling never consumes and consuming never talks to Ethos. A handler is a
+`consume.base.ConsumeHandler` subclass implementing `plan()` (pure) and
+`apply()` (writes), registered per resource name in the
+`ETHOS_CONSUME_HANDLERS` setting and resolved by `consume/registry.py`. With
+no handler configured for a resource, `process_ethos_messages` marks its
+messages `skipped` and they stay that way — that is Part 1's intended end
+state; Part 2 (a separate, later change) supplies the first real handler
+(`section-registrations`) and turns it on via `ETHOS_CONSUME_AUTO`.
+
+Nothing here is scheduled — no `CronTab` row, no `cron_jobs.py` edit. All four
+commands are run manually until the pipeline is trusted per tenant.
 
 ### import_sections_from_ethos
 
@@ -223,7 +293,18 @@ All write methods on `RegistrationMixin` (`update_registration_status`, `update_
 ## Running Tests
 
 ```bash
-docker exec django_web_ewu python webapp/manage.py test ethos.tests
+docker exec -w /app/webapp django_web_ewu python manage.py test ethos.ethos
 ```
+
+This is the inner Django app's suite (`ethos/tests/`, including the consume
+framework tests in `test_consume_*.py`) — the one to run for regression
+checks on this package.
+
+The root-level `ethos.tests` package (`tests/` at the submodule root) exists
+alongside it but as of this writing has 25 pre-existing failures (5 failures +
+20 errors) from a missing tenant importer module
+(`ethos.ethos.library.importer.ewu`) unrelated to any single change — do not
+treat a run of the bare `ethos.tests` label as a regression signal without
+first confirming which failures are pre-existing.
 
 Tests mock `_api_request` to avoid real API calls.

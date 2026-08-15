@@ -206,6 +206,71 @@ python manage.py import_sections_from_ethos <term_code> --create
 python manage.py sync_ethos_resources
 ```
 
+## Change Notifications
+
+Ethos exposes each application's change-notification queue at `/consume`. This
+package polls that queue into `EthosMessage` rows (capture), and separately
+dispatches stored messages to tenant-owned handlers (consume). The two steps
+are deliberately independent commands — polling never consumes, and consuming
+never talks to Ethos.
+
+> **A successful `GET /consume` always advances Ethos's queue pointer.**
+> `lastProcessedID` only replays notifications still inside Ethos's retention
+> window — it does not hold the pointer back. If a poll run fails after
+> Ethos has already advanced the pointer but before the batch was persisted,
+> recover with `--from-id <id>` to replay from a known-good id. Use `--peek`
+> (a `HEAD /consume` request) to check queue depth with no side effects at
+> all — it never advances anything.
+
+### Commands
+
+```bash
+# Store notifications (never consumes)
+python manage.py poll_ethos_messages --peek                    # queue depth only, HEAD /consume, no side effects
+python manage.py poll_ethos_messages                            # one batch, default limit
+python manage.py poll_ethos_messages --limit 250 --max-batches 5
+python manage.py poll_ethos_messages --from-id 1042              # replay from a known-good id, ignoring the stored cursor
+
+# Dispatch stored notifications to handlers (never polls Ethos)
+python manage.py process_ethos_messages --dry-run                # plan only, per-resource auto-consume, writes nothing
+python manage.py process_ethos_messages --resource section-registrations --dry-run
+python manage.py process_ethos_messages --id 42 --force          # re-run one message regardless of status
+python manage.py process_ethos_messages --limit 100
+
+# Retention purges (neither is scheduled — run manually or wire up your own cron)
+python manage.py purge_ethos_messages --dry-run
+python manage.py purge_ethos_messages
+python manage.py purge_ethos_logs --dry-run
+python manage.py purge_ethos_logs
+```
+
+`poll_ethos_messages` stores every notification with `status=pending`.
+`process_ethos_messages` only touches `pending` messages unless `--id` or
+`--force` is given; a resource is only auto-selected when its
+`ETHOS_CONSUME_AUTO` entry is `True` (see below). `--dry-run` calls the
+handler's `plan()` only — the same code path a real consume uses to decide
+what to do — so a dry run cannot diverge from what the real run would do.
+
+### Settings
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `ETHOS_CONSUME_LIMIT` | `100` | Notifications requested per `/consume` batch (Ethos allows 1-1000). |
+| `ETHOS_CONSUME_RETENTION_DAYS` | `30` | Age (by `received_on`) at which `purge_ethos_messages` deletes an `EthosMessage`. |
+| `ETHOS_LOG_RETENTION_DAYS` | `90` | Age (by `sent_on`) at which `purge_ethos_logs` deletes an `EthosLog`. |
+| `ETHOS_CONSUME_AUTO` | `{}` | `{resource_name: True}` — opts a resource into unattended consuming by `process_ethos_messages` when run without `--resource`/`--id`. Every resource is off by default. |
+| `ETHOS_CONSUME_HANDLERS` | `{}` | `{resource_name: 'dotted.path.To.Handler'}` — tenant-owned `ConsumeHandler` subclasses. A resource with no handler configured stores as `pending` forever and is skipped by `process_ethos_messages`. |
+
+### UI
+
+`/ce/ethos/messages/` lists stored notifications (DataTables) with dry-run and
+consume actions per row; `/ce/ethos/messages/<pk>/` shows the raw payload
+alongside the extracted envelope fields and the consume result.
+
+Nothing here is scheduled. `poll_ethos_messages`, `process_ethos_messages`,
+`purge_ethos_messages`, and `purge_ethos_logs` all run manually (or via a cron
+job the host app adds) until the pipeline is trusted for a given tenant.
+
 ## Background Task Worker
 
 ```bash

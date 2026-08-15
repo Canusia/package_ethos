@@ -4,6 +4,7 @@ include requirements.txt
 recursive-include ethos/templates *
 recursive-include ethos/staticfiles *
 recursive-include ethos/migrations *.py
+recursive-include ethos/tests/fixtures *.json
 global-exclude *.pyc
 global-exclude __pycache__
 global-exclude *.pyo
