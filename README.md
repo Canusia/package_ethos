@@ -145,6 +145,11 @@ Add the following entry to the `ce_menu` JSON in the `cis.settings.menu` DB sett
       "url": "ethos:ethos_logs"
     },
     {
+      "label": "Messages",
+      "name": "ethos_messages",
+      "url": "ethos:ethos_messages"
+    },
+    {
       "label": "Status",
       "name": "ethos_status",
       "url": "ethos:ethos_status"
@@ -152,6 +157,12 @@ Add the following entry to the `ce_menu` JSON in the `cis.settings.menu` DB sett
   ]
 }
 ```
+
+The **Messages** sub-item is added automatically by migration
+`0005_menu_ethos_messages` once this group exists — you only need to include it
+by hand when creating the group from scratch. That migration deliberately
+no-ops when the `ethos` group is absent, rather than creating a group holding
+only "Messages".
 
 ---
 

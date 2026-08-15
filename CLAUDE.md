@@ -161,6 +161,7 @@ Migrations live at `ethos/ethos/migrations/`. App label is `ethos` in both dev a
 | `0002_ethoslog.py` | EthosLog |
 | `0003_resource_preferred_representation.py` | preferred_representation FK on EthosResource |
 | `0004_ethosconsumecursor_ethosmessage.py` | EthosMessage, EthosConsumeCursor |
+| `0005_menu_ethos_messages.py` | Data migration — adds the "Messages" sub-item to the CE sidebar's SIS nav group in the `cis.settings.menu` Setting. Depends on `('cis', '__first__')`. Idempotent, reversible, no-ops when the Setting row or the `ethos` group is absent. |
 
 ### EthosMessage / EthosConsumeCursor
 
