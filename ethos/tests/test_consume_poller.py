@@ -2,16 +2,18 @@
 import importlib.util
 import json
 import os
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 
 if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.consume.poller import poll
     from ethos.ethos.models import EthosMessage, EthosConsumeCursor
+    import ethos.ethos.models as models_mod
 else:
     from ethos.consume.poller import poll
     from ethos.models import EthosMessage, EthosConsumeCursor
+    import ethos.models as models_mod
 
 FIXTURE = os.path.join(os.path.dirname(__file__), 'fixtures',
                        'ctc-section-registration-notifications.json')
@@ -76,8 +78,10 @@ class PollerTests(TestCase):
         self.assertEqual(EthosMessage.objects.count(), 27)
         self.assertEqual(result['duplicates'], 27)
 
-    def test_cursor_unchanged_when_persist_fails(self):
-        """A crash mid-batch must be replayable from the unchanged cursor."""
+    def test_malformed_queue_id_aborts_batch_before_any_write(self):
+        """A record whose id can't be parsed as an int blows up in the sort key,
+        before any row is created or the cursor is touched — this is a guard on
+        the parse step, not a test of transactional rollback."""
         bad = dict(self.sample[0])
         bad['id'] = 'not-a-number'
         client = fake_client([[self.sample[0], bad]])
@@ -88,7 +92,28 @@ class PollerTests(TestCase):
         self.assertEqual(EthosConsumeCursor.load().last_processed_id, 0)
         self.assertEqual(EthosMessage.objects.count(), 0)
 
+    def test_transaction_rolls_back_first_row_when_cursor_save_fails(self):
+        """A failure that happens genuinely mid-batch — after at least one row
+        has already been written — must still leave zero trace: the write and
+        the cursor advance are one atomic unit, so a crash before commit
+        replays cleanly from the unchanged cursor."""
+        EthosConsumeCursor.load()  # materialize the singleton row before we
+                                    # patch save(), or the read-side load()
+                                    # inside poll() would trip the patch first.
+        client = fake_client([self.sample[:2]])
+
+        with patch.object(models_mod.EthosConsumeCursor, 'save',
+                           side_effect=RuntimeError('boom')):
+            with self.assertRaises(RuntimeError):
+                poll(client=client, limit=100)
+
+        self.assertEqual(EthosMessage.objects.count(), 0)
+        self.assertEqual(EthosConsumeCursor.load().last_processed_id, 0)
+
     def test_from_id_overrides_the_cursor(self):
+        cursor = EthosConsumeCursor.load()
+        cursor.last_processed_id = 50
+        cursor.save()
         client = fake_client([self.sample])
 
         poll(client=client, limit=100, from_id=0)
@@ -96,11 +121,31 @@ class PollerTests(TestCase):
         self.assertEqual(client.get_messages.call_args[1]['last_processed_id'], 0)
 
     def test_empty_batch_leaves_cursor_alone(self):
-        EthosConsumeCursor.load()
+        cursor = EthosConsumeCursor.load()
+        cursor.last_processed_id = 42
+        cursor.save()
         result = poll(client=fake_client([[]]), limit=100)
 
         self.assertEqual(result['stored'], 0)
-        self.assertEqual(EthosConsumeCursor.load().last_processed_id, 0)
+        self.assertEqual(EthosConsumeCursor.load().last_processed_id, 42)
+
+    def test_replay_range_carries_local_high_water_mark_across_batches(self):
+        """--from-id is the documented recovery mechanism for a queue whose
+        pointer has already advanced past the stored cursor. Each subsequent
+        batch in the same poll() call must continue from where the previous
+        batch left off, not jump back to the (far-ahead) stored cursor."""
+        cursor = EthosConsumeCursor.load()
+        cursor.last_processed_id = 100
+        cursor.save()
+        client = fake_client([self.sample[:5], self.sample[5:10]])
+
+        # limit=5 matches the first batch's size exactly, so the poller treats
+        # it as a full page and continues to the second batch (the len(records)
+        # < limit early-exit only fires on a short page).
+        poll(client=client, limit=5, from_id=5, max_batches=2)
+
+        second_call_kwargs = client.get_messages.call_args_list[1][1]
+        self.assertEqual(second_call_kwargs['last_processed_id'], 5)
 
     def test_drains_multiple_batches_up_to_max(self):
         client = fake_client([self.sample[:10], self.sample[10:20]], remaining=7)
