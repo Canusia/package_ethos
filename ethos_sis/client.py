@@ -11,6 +11,11 @@ from urllib3.util.retry import Retry
 from .config import Config
 
 
+CHANGE_NOTIFICATION_MEDIA_TYPE = (
+    "application/vnd.hedtech.change-notifications.v2+json"
+)
+
+
 class EthosClient:
     """Django-free client for the Ellucian Ethos Integration API."""
 
@@ -83,6 +88,62 @@ class EthosClient:
             return None
         self._check(resp)
         return resp.json()
+
+    def consume_messages(
+        self,
+        *,
+        limit: int | None = None,
+        last_processed_id: int | None = None,
+    ) -> tuple[list, int | None]:
+        """GET /consume — read change-notifications off the app's queue.
+
+        Returns ``(notifications, remaining)`` where ``remaining`` is the
+        ``x-remaining`` header (messages still queued after this batch), or
+        None if the header is absent.
+
+        A plain call drains what it returns; pass ``last_processed_id`` to
+        re-read everything published after that notification ID instead.
+        """
+        if limit is not None and not 1 <= limit <= 1000:
+            raise ValueError("limit must be between 1 and 1000.")
+
+        params: dict = {}
+        if last_processed_id is not None:
+            params["lastProcessedID"] = last_processed_id
+        if limit is not None:
+            params["limit"] = limit
+
+        resp = self._session.get(
+            f"{self.config.base_url}/consume",
+            headers=self._headers(CHANGE_NOTIFICATION_MEDIA_TYPE),
+            params=params,
+            timeout=self.config.timeout,
+        )
+        self._check(resp)
+        records = resp.json() or []
+        if not isinstance(records, list):
+            records = [records]
+        return records, self._remaining(resp)
+
+    def available_message_count(self) -> int:
+        """HEAD /consume — queue depth without draining it."""
+        resp = self._session.head(
+            f"{self.config.base_url}/consume",
+            headers=self._headers(CHANGE_NOTIFICATION_MEDIA_TYPE),
+            timeout=self.config.timeout,
+        )
+        self._check(resp)
+        return self._remaining(resp) or 0
+
+    @staticmethod
+    def _remaining(resp) -> int | None:
+        value = resp.headers.get("x-remaining")
+        if value in (None, ""):
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
 
     def get_collection(
         self,

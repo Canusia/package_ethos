@@ -1,0 +1,1731 @@
+[
+  {
+    "id": "1",
+    "published": "2026-08-12 20:48:04.702495+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "39c6781e-5537-4f4e-9b74-7d48e70d7b4a",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageId": "5704543",
+    "initiated": "2026-07-27T16:44:07Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "5bd804d4-1507-486d-96f7-e54c3fc66125"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-07-27",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-07-27",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-08-17T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "39c6781e-5537-4f4e-9b74-7d48e70d7b4a"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "2",
+    "published": "2026-08-12 20:48:05.399403+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "f8322049-68b4-4f8d-b76c-147b265df056",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "created",
+    "contentType": "resource-representation",
+    "messageId": "5704603",
+    "initiated": "2026-08-04T14:05:45Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "f807272a-40e3-49f1-9f1a-e0022160c76a"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-04",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-05",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-08-17T05:00:00Z",
+        "endOn": "2026-11-06T06:00:00Z"
+      },
+      "id": "f8322049-68b4-4f8d-b76c-147b265df056"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "3",
+    "published": "2026-08-12 20:48:05.399403+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "f8322049-68b4-4f8d-b76c-147b265df056",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageId": "5704619",
+    "initiated": "2026-08-05T16:37:26Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "f807272a-40e3-49f1-9f1a-e0022160c76a"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-04",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-05",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-08-17T05:00:00Z",
+        "endOn": "2026-11-06T06:00:00Z"
+      },
+      "id": "f8322049-68b4-4f8d-b76c-147b265df056"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "4",
+    "published": "2026-08-12 20:48:05.399403+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageId": "5704631",
+    "initiated": "2026-08-05T19:08:41Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "861e10e0-ec92-4620-a9ed-fe4f6d6286f1"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-05",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-06",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "5",
+    "published": "2026-08-12 20:48:05.399403+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageId": "5704638",
+    "initiated": "2026-08-06T18:48:39Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "861e10e0-ec92-4620-a9ed-fe4f6d6286f1"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-05",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-06",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "6",
+    "published": "2026-08-12 20:48:05.399403+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "c2cc718c-f187-4d4c-9e5c-e68debfa5564",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "created",
+    "contentType": "resource-representation",
+    "messageId": "5704646",
+    "initiated": "2026-08-06T19:03:17Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "966e1736-acac-4d19-94ef-fc875d0bef07"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-06",
+      "status": {
+        "registrationStatus": "registered",
+        "sectionRegistrationStatusReason": "registered",
+        "detail": {
+          "id": "56029862-2c12-40f4-843e-649c15e31a46"
+        }
+      },
+      "statusDate": "2026-08-06",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-08-17T05:00:00Z",
+        "endOn": "2026-10-09T05:00:00Z"
+      },
+      "id": "c2cc718c-f187-4d4c-9e5c-e68debfa5564"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "7",
+    "published": "2026-08-12 20:48:07.832251+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "5926944e-1658-46f3-8a94-f7eae377d2f2",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageId": "5704944",
+    "initiated": "2026-08-12T20:47:48Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "03504946-882a-4bad-9f58-670e6846ca30"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-04",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-05",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "5926944e-1658-46f3-8a94-f7eae377d2f2"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "8",
+    "published": "2026-08-12 20:48:07.832251+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageId": "5704945",
+    "initiated": "2026-08-12T20:47:48Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "861e10e0-ec92-4620-a9ed-fe4f6d6286f1"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-05",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-06",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "9",
+    "published": "2026-08-12 20:48:18.310223+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "39c6781e-5537-4f4e-9b74-7d48e70d7b4a",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "created",
+    "contentType": "resource-representation",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "5bd804d4-1507-486d-96f7-e54c3fc66125"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-07-27",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-07-27",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-08-17T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "39c6781e-5537-4f4e-9b74-7d48e70d7b4a"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "10",
+    "published": "2026-08-12 20:48:18.436933+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "5926944e-1658-46f3-8a94-f7eae377d2f2",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "created",
+    "contentType": "resource-representation",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "03504946-882a-4bad-9f58-670e6846ca30"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-04",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-05",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "5926944e-1658-46f3-8a94-f7eae377d2f2"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "11",
+    "published": "2026-08-12 20:48:18.436933+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "created",
+    "contentType": "resource-representation",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "861e10e0-ec92-4620-a9ed-fe4f6d6286f1"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-05",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-06",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "12",
+    "published": "2026-08-12 20:48:18.436933+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "861e10e0-ec92-4620-a9ed-fe4f6d6286f1"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-05",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-06",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "13",
+    "published": "2026-08-12 20:48:18.436933+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "861e10e0-ec92-4620-a9ed-fe4f6d6286f1"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-05",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-06",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "14",
+    "published": "2026-08-12 20:48:18.436933+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "861e10e0-ec92-4620-a9ed-fe4f6d6286f1"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-05",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-06",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "67ecfd6c-7e17-45f5-a83a-dccb0869d8a1"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "15",
+    "published": "2026-08-12 20:48:18.436933+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "f54ac19e-7e09-4745-9cbd-a04b97df1b39",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "created",
+    "contentType": "resource-representation",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "3c4a4453-3c09-47d7-9c07-abfd71c9a0c7"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-08",
+      "status": {
+        "registrationStatus": "registered",
+        "sectionRegistrationStatusReason": "registered",
+        "detail": {
+          "id": "56029862-2c12-40f4-843e-649c15e31a46"
+        }
+      },
+      "statusDate": "2026-08-08",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "f54ac19e-7e09-4745-9cbd-a04b97df1b39"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "16",
+    "published": "2026-08-13 14:16:23.583445+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "c2cc718c-f187-4d4c-9e5c-e68debfa5564",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageId": "5705067",
+    "initiated": "2026-08-13T14:16:14Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "966e1736-acac-4d19-94ef-fc875d0bef07"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-06",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-13",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-08-17T05:00:00Z",
+        "endOn": "2026-10-09T05:00:00Z"
+      },
+      "id": "c2cc718c-f187-4d4c-9e5c-e68debfa5564"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "17",
+    "published": "2026-08-13 14:16:28.66917+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "f54ac19e-7e09-4745-9cbd-a04b97df1b39",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "3c4a4453-3c09-47d7-9c07-abfd71c9a0c7"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-08",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-13",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "f54ac19e-7e09-4745-9cbd-a04b97df1b39"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "18",
+    "published": "2026-08-13 22:06:14.410056+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "6a5cdd6c-947e-419e-8f6d-e4c770d3b3e0",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "created",
+    "contentType": "resource-representation",
+    "messageId": "5705099",
+    "initiated": "2026-08-13T22:06:06Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "6088352a-9982-41db-a1b8-ef956ae9bfed"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-13",
+      "status": {
+        "registrationStatus": "registered",
+        "sectionRegistrationStatusReason": "registered",
+        "detail": {
+          "id": "56029862-2c12-40f4-843e-649c15e31a46"
+        }
+      },
+      "statusDate": "2026-08-13",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "6a5cdd6c-947e-419e-8f6d-e4c770d3b3e0"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "19",
+    "published": "2026-08-13 22:06:32.297009+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "98d87844-488b-48bf-b3a8-44584373acdf",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "created",
+    "contentType": "resource-representation",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "31573bd7-c0a2-4007-8cbd-e5d9434b94c2"
+      },
+      "section": {
+        "id": "6c1437d8-64a4-4995-baf9-6200b76f7cec"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-13",
+      "status": {
+        "registrationStatus": "registered",
+        "sectionRegistrationStatusReason": "registered",
+        "detail": {
+          "id": "56029862-2c12-40f4-843e-649c15e31a46"
+        }
+      },
+      "statusDate": "2026-08-13",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-08-17T05:00:00Z",
+        "endOn": "2026-10-09T05:00:00Z"
+      },
+      "id": "98d87844-488b-48bf-b3a8-44584373acdf"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "20",
+    "published": "2026-08-13 23:14:42.723533+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "9921677e-04e2-4771-aead-b2224b64d927",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "created",
+    "contentType": "resource-representation",
+    "messageId": "5705121",
+    "initiated": "2026-08-13T23:14:30Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "3c64102e-915a-4ed5-b6ff-469095eb096d"
+      },
+      "section": {
+        "id": "eee9dad8-5f9a-42d2-9339-e84ef958697a"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-13",
+      "status": {
+        "registrationStatus": "registered",
+        "sectionRegistrationStatusReason": "registered",
+        "detail": {
+          "id": "56029862-2c12-40f4-843e-649c15e31a46"
+        }
+      },
+      "statusDate": "2026-08-13",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "9921677e-04e2-4771-aead-b2224b64d927"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "21",
+    "published": "2026-08-14 14:35:49.380225+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "0109fa16-4540-43db-8843-4908ea09d3a8",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "created",
+    "contentType": "resource-representation",
+    "messageId": "5705191",
+    "initiated": "2026-08-14T14:35:40Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "beb89f04-d6bb-4268-bcd3-e88607b70074"
+      },
+      "section": {
+        "id": "4317349d-97b4-47b7-b37e-adec8ee549ff"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-14",
+      "status": {
+        "registrationStatus": "registered",
+        "sectionRegistrationStatusReason": "registered",
+        "detail": {
+          "id": "56029862-2c12-40f4-843e-649c15e31a46"
+        }
+      },
+      "statusDate": "2026-08-14",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-10-13T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "0109fa16-4540-43db-8843-4908ea09d3a8"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "22",
+    "published": "2026-08-14 14:36:07.013329+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "1fb218cb-df9d-4f73-97bd-ac6731a6030c",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "created",
+    "contentType": "resource-representation",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "beb89f04-d6bb-4268-bcd3-e88607b70074"
+      },
+      "section": {
+        "id": "5e8af429-6fdc-4bb7-a053-fbab41402372"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-14",
+      "status": {
+        "registrationStatus": "registered",
+        "sectionRegistrationStatusReason": "registered",
+        "detail": {
+          "id": "56029862-2c12-40f4-843e-649c15e31a46"
+        }
+      },
+      "statusDate": "2026-08-14",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-08-17T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "1fb218cb-df9d-4f73-97bd-ac6731a6030c"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "23",
+    "published": "2026-08-14 14:38:52.052168+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "3fa1b915-b37d-49dc-b01f-425787708c19",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "created",
+    "contentType": "resource-representation",
+    "messageId": "5705205",
+    "initiated": "2026-08-14T14:38:47Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "92399800-2ad8-4dc3-a252-7043293a02cf"
+      },
+      "section": {
+        "id": "5f10526e-c439-422a-a8d2-8ee6df504c5f"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-14",
+      "status": {
+        "registrationStatus": "registered",
+        "sectionRegistrationStatusReason": "registered",
+        "detail": {
+          "id": "56029862-2c12-40f4-843e-649c15e31a46"
+        }
+      },
+      "statusDate": "2026-08-14",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-08-17T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "3fa1b915-b37d-49dc-b01f-425787708c19"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "24",
+    "published": "2026-08-14 14:39:05.114257+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "553fd755-2453-4551-9de7-6b0b8e6b678e",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "created",
+    "contentType": "resource-representation",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "92399800-2ad8-4dc3-a252-7043293a02cf"
+      },
+      "section": {
+        "id": "0d7db46c-b971-4353-bb92-df460016cdc5"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-14",
+      "status": {
+        "registrationStatus": "registered",
+        "sectionRegistrationStatusReason": "registered",
+        "detail": {
+          "id": "56029862-2c12-40f4-843e-649c15e31a46"
+        }
+      },
+      "statusDate": "2026-08-14",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-08-17T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "553fd755-2453-4551-9de7-6b0b8e6b678e"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "25",
+    "published": "2026-08-14 14:39:35.371972+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "553fd755-2453-4551-9de7-6b0b8e6b678e",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "92399800-2ad8-4dc3-a252-7043293a02cf"
+      },
+      "section": {
+        "id": "0d7db46c-b971-4353-bb92-df460016cdc5"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-14",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-14",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-08-17T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "553fd755-2453-4551-9de7-6b0b8e6b678e"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "26",
+    "published": "2026-08-14 14:43:50.052249+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "1fb218cb-df9d-4f73-97bd-ac6731a6030c",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageId": "5705217",
+    "initiated": "2026-08-14T14:43:40Z",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "beb89f04-d6bb-4268-bcd3-e88607b70074"
+      },
+      "section": {
+        "id": "5e8af429-6fdc-4bb7-a053-fbab41402372"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-14",
+      "status": {
+        "registrationStatus": "notRegistered",
+        "sectionRegistrationStatusReason": "dropped",
+        "detail": {
+          "id": "4ab49b78-1554-49cd-8abc-f6d0f1cbdca9"
+        }
+      },
+      "statusDate": "2026-08-14",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-08-17T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "1fb218cb-df9d-4f73-97bd-ac6731a6030c"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  },
+  {
+    "id": "27",
+    "published": "2026-08-14 14:44:25.081173+00",
+    "resource": {
+      "name": "section-registrations",
+      "id": "1fb218cb-df9d-4f73-97bd-ac6731a6030c",
+      "version": "application/vnd.hedtech.integration.v16.2.0+json"
+    },
+    "operation": "replaced",
+    "contentType": "resource-representation",
+    "messageType": "change-notification",
+    "content": {
+      "registrant": {
+        "id": "beb89f04-d6bb-4268-bcd3-e88607b70074"
+      },
+      "section": {
+        "id": "5e8af429-6fdc-4bb7-a053-fbab41402372"
+      },
+      "academicLevel": {
+        "id": "726aee41-d9b0-49ca-b0bd-17f758fb88b1"
+      },
+      "originallyRegisteredOn": "2026-08-14",
+      "status": {
+        "registrationStatus": "registered",
+        "sectionRegistrationStatusReason": "registered",
+        "detail": {
+          "id": "56029862-2c12-40f4-843e-649c15e31a46"
+        }
+      },
+      "statusDate": "2026-08-14",
+      "approvals": [
+        {
+          "approvalType": "all",
+          "approvalEntity": "system"
+        }
+      ],
+      "credit": {
+        "measure": "credit",
+        "registrationCredit": 3
+      },
+      "gradingOption": {
+        "gradeScheme": {
+          "id": "c8a2cbee-1716-4658-b402-79f33bfd3ddd"
+        },
+        "mode": "standard"
+      },
+      "involvement": {
+        "startOn": "2026-08-17T05:00:00Z",
+        "endOn": "2026-12-11T06:00:00Z"
+      },
+      "id": "1fb218cb-df9d-4f73-97bd-ac6731a6030c"
+    },
+    "publisher": {
+      "id": "97a97f35-f83e-4d27-b19b-0902f80fd158",
+      "applicationName": "Test Ethos v2",
+      "tenant": {
+        "id": "a018cc61-0ca9-42dc-b0f1-cb0d72d373e1",
+        "alias": "ctctest",
+        "name": "Central Texas College",
+        "environment": "Test"
+      }
+    }
+  }
+]

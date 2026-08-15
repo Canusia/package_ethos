@@ -71,6 +71,53 @@ class GetEntityTest(unittest.TestCase):
             self.assertIsNone(client.get_entity("api/subjects", "missing"))
 
 
+class ConsumeMessagesTest(unittest.TestCase):
+    def test_sends_change_notification_accept_and_params(self):
+        client = make_client()
+        resp = fake_response(json_data=[{"id": "1"}], headers={"x-remaining": "4"})
+        with mock.patch.object(client, "_auth_token", return_value="t"), \
+             mock.patch.object(client._session, "get", return_value=resp) as get:
+            records, remaining = client.consume_messages(limit=5, last_processed_id=3)
+        self.assertEqual(records, [{"id": "1"}])
+        self.assertEqual(remaining, 4)
+        args, kwargs = get.call_args
+        self.assertEqual(args[0], "https://ethos.test/consume")
+        self.assertEqual(kwargs["params"], {"lastProcessedID": 3, "limit": 5})
+        self.assertEqual(kwargs["headers"]["Accept"],
+                         "application/vnd.hedtech.change-notifications.v2+json")
+
+    def test_omits_unset_params(self):
+        client = make_client()
+        resp = fake_response(json_data=[], headers={})
+        with mock.patch.object(client, "_auth_token", return_value="t"), \
+             mock.patch.object(client._session, "get", return_value=resp) as get:
+            records, remaining = client.consume_messages()
+        self.assertEqual(records, [])
+        self.assertIsNone(remaining)
+        self.assertEqual(get.call_args.kwargs["params"], {})
+
+    def test_rejects_out_of_range_limit(self):
+        client = make_client()
+        for bad in (0, 1001):
+            with self.assertRaises(ValueError):
+                client.consume_messages(limit=bad)
+
+    def test_available_message_count_uses_head(self):
+        client = make_client()
+        resp = fake_response(headers={"x-remaining": "12"})
+        with mock.patch.object(client, "_auth_token", return_value="t"), \
+             mock.patch.object(client._session, "head", return_value=resp) as head:
+            self.assertEqual(client.available_message_count(), 12)
+        self.assertEqual(head.call_args[0][0], "https://ethos.test/consume")
+
+    def test_available_message_count_defaults_to_zero(self):
+        client = make_client()
+        with mock.patch.object(client, "_auth_token", return_value="t"), \
+             mock.patch.object(client._session, "head",
+                               return_value=fake_response(headers={})):
+            self.assertEqual(client.available_message_count(), 0)
+
+
 class GetCollectionTest(unittest.TestCase):
     def test_single_page(self):
         client = make_client()

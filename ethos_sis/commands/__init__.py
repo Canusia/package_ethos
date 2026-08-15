@@ -54,3 +54,6 @@ from . import registration  # noqa: E402
 COMMAND_MODULES.append(registration)
 from . import admin  # noqa: E402
 COMMAND_MODULES.append(admin)
+
+from . import consume  # noqa: E402
+COMMAND_MODULES.append(consume)

@@ -12,7 +12,8 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(cfg.auth_url, "https://example.test/auth")
 
     @mock.patch.dict(os.environ, {}, clear=True)
-    def test_defaults_when_env_absent(self):
+    @mock.patch("ethos_sis.config._load_dotenv")  # ignore any real .env beside the repo
+    def test_defaults_when_env_absent(self, _dotenv):
         cfg = load_config()
         self.assertEqual(cfg.base_url, "https://integrate.elluciancloud.com")
         self.assertEqual(cfg.api_key, "")
