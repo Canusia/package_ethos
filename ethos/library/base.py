@@ -6,6 +6,7 @@ credential extraction shared by all domain mixins.
 """
 
 import logging, requests, json, time
+from urllib.parse import urlencode
 from django.conf import settings
 import jwt
 
@@ -60,6 +61,51 @@ class EthosBase:
             logger.error(e)
             return {}
 
+    CONSUME_ACCEPT = 'application/vnd.hedtech.change-notifications.v2+json'
+
+    def get_messages(self, limit=None, last_processed_id=None, **kwargs):
+        """Read a batch of change-notifications off this application's queue.
+
+        Returns (records, log). A successful GET ALWAYS advances the queue
+        pointer — `last_processed_id` only replays messages still inside Ethos's
+        retention window, it does not hold the pointer back. Callers must persist
+        a batch before treating it as read.
+        """
+        params = {}
+        if limit is not None:
+            params['limit'] = limit
+        if last_processed_id is not None:
+            params['lastProcessedID'] = last_processed_id
+
+        url = f'{self.URL}/consume'
+        if params:
+            url = f'{url}?{urlencode(params)}'
+
+        resp, log = self._api_request(
+            'GET', url, 'change_notifications',
+            headers={'Accept': self.CONSUME_ACCEPT}, **kwargs
+        )
+        if resp.ok:
+            try:
+                return resp.json(), log
+            except ValueError:
+                logger.error('Unable to parse change-notification batch')
+                return [], log
+
+        logger.error('Unable to read change-notifications: %s', resp.status_code)
+        return [], log
+
+    def available_message_count(self, **kwargs):
+        """Queue depth via HEAD /consume — the only side-effect-free peek."""
+        resp, _log = self._api_request(
+            'HEAD', f'{self.URL}/consume', 'change_notifications_peek',
+            headers={'Accept': self.CONSUME_ACCEPT}, **kwargs
+        )
+        try:
+            return int(resp.headers.get('x-remaining', 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+
     def _api_request(self, method, url, message_type, description='', data=None, json_data=None, headers=None, **kwargs):
         """Make an authenticated API request and log it to EthosLog."""
         token = self.get_auth_token()
@@ -77,6 +123,10 @@ class EthosBase:
             resp = requests.post(url, headers=req_headers, data=data, json=json_data)
         elif method == 'PUT':
             resp = requests.put(url, headers=req_headers, data=data, json=json_data)
+        elif method == 'HEAD':
+            resp = requests.head(url, headers=req_headers)
+        else:
+            raise ValueError(f'Unsupported HTTP method: {method}')
 
         if verbose:
             print(resp.status_code, resp.content)
