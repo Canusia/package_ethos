@@ -72,11 +72,9 @@ class ProcessCommandTests(TestCase):
 
         call_command('process_ethos_messages', stdout=StringIO())
 
-        consumed = list(EthosMessage.objects.filter(pk__in=APPLIED)
-                        .values_list('queue_id', flat=True))
         applied_order = [EthosMessage.objects.get(pk=pk).queue_id for pk in APPLIED]
         self.assertEqual(applied_order, [1, 2, 3])
-        self.assertEqual(len(consumed), 3)
+        self.assertEqual(len(applied_order), 3)
 
     @override_settings(ETHOS_CONSUME_HANDLERS=HANDLERS)
     def test_resource_filter_limits_selection(self):
@@ -90,3 +88,29 @@ class ProcessCommandTests(TestCase):
                          EthosMessage.CONSUMED)
         self.assertEqual(EthosMessage.objects.get(queue_id=2).status,
                          EthosMessage.PENDING)
+
+    @override_settings(ETHOS_CONSUME_HANDLERS=HANDLERS)
+    def test_bare_force_consumes_despite_auto_consume_off(self):
+        _message(1)
+        call_command('process_ethos_messages', '--force', stdout=StringIO())
+
+        self.assertEqual(EthosMessage.objects.get(queue_id=1).status,
+                         EthosMessage.CONSUMED)
+
+    @override_settings(ETHOS_CONSUME_HANDLERS=HANDLERS)
+    def test_force_reruns_a_failed_message(self):
+        msg = _message(1, status=EthosMessage.FAILED)
+        call_command('process_ethos_messages', '--force', stdout=StringIO())
+
+        self.assertEqual(EthosMessage.objects.get(pk=msg.pk).status,
+                         EthosMessage.CONSUMED)
+
+    @override_settings(ETHOS_CONSUME_HANDLERS=HANDLERS)
+    def test_resource_filter_without_force_leaves_consumed_message_untouched(self):
+        msg = _message(1, status=EthosMessage.CONSUMED)
+        call_command('process_ethos_messages', '--resource', 'section-registrations',
+                     stdout=StringIO())
+
+        self.assertEqual(EthosMessage.objects.get(pk=msg.pk).status,
+                         EthosMessage.CONSUMED)
+        self.assertEqual(APPLIED, [])

@@ -36,17 +36,19 @@ class Command(BaseCommand):
         if options['id'] is not None:
             return EthosMessage.objects.filter(pk=options['id'])
 
-        qs = EthosMessage.objects.filter(status=EthosMessage.PENDING)
+        qs = EthosMessage.objects.all()
+        if not options['force']:
+            qs = qs.filter(status=EthosMessage.PENDING)
+
         if options['resource']:
             qs = qs.filter(resource_name=options['resource'])
-        else:
+        elif not options['force']:
             enabled = [r for r in qs.values_list('resource_name', flat=True).distinct()
                        if config.auto_consume_enabled(r)]
             qs = qs.filter(resource_name__in=enabled)
         return qs
 
     def handle(self, *args, **options):
-        explicit = options['id'] is not None or bool(options['resource'])
         force = options['force'] or options['id'] is not None
 
         qs = self._queryset(options).order_by('queue_id')
@@ -66,7 +68,7 @@ class Command(BaseCommand):
                     self.stdout.write(f'    {change.field}: {change.old} -> {change.new}')
                 continue
 
-            consume_message(message, force=force or explicit)
+            consume_message(message, force=force)
             message.refresh_from_db()
             counts[message.status] = counts.get(message.status, 0) + 1
 
