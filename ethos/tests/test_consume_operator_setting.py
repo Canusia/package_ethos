@@ -18,6 +18,7 @@ else:  # pragma: no cover - flat pip layout
 
 from cis.models.crontab import CronTab
 from cis.models.settings import Setting
+from . import PKG
 
 
 def _seed(**overrides):
@@ -120,7 +121,7 @@ class PollCommandGateTests(TestCase):
         _seed(is_active='No')
         out = StringIO()
 
-        with patch('ethos.ethos.consume.poller.poll') as mock_poll:
+        with patch(f'{PKG}.consume.poller.poll') as mock_poll:
             call_command('poll_ethos_messages', stdout=out)
 
         mock_poll.assert_not_called()
@@ -129,7 +130,7 @@ class PollCommandGateTests(TestCase):
     def test_force_overrides_the_gate(self):
         _seed(is_active='No')
 
-        with patch('ethos.ethos.management.commands.poll_ethos_messages.poll',
+        with patch(f'{PKG}.management.commands.poll_ethos_messages.poll',
                    return_value={'stored': 0, 'duplicates': 0, 'batches': 1, 'last_id': None}) as mock_poll:
             call_command('poll_ethos_messages', '--force', stdout=StringIO())
 
@@ -138,7 +139,7 @@ class PollCommandGateTests(TestCase):
     def test_polls_when_enabled(self):
         _seed(is_active='Yes', limit=250, max_batches=3)
 
-        with patch('ethos.ethos.management.commands.poll_ethos_messages.poll',
+        with patch(f'{PKG}.management.commands.poll_ethos_messages.poll',
                    return_value={'stored': 2, 'duplicates': 0, 'batches': 1, 'last_id': 9}) as mock_poll:
             call_command('poll_ethos_messages', stdout=StringIO())
 
@@ -148,7 +149,7 @@ class PollCommandGateTests(TestCase):
     def test_flags_override_the_configured_values(self):
         _seed(is_active='Yes', limit=250, max_batches=3)
 
-        with patch('ethos.ethos.management.commands.poll_ethos_messages.poll',
+        with patch(f'{PKG}.management.commands.poll_ethos_messages.poll',
                    return_value={'stored': 0, 'duplicates': 0, 'batches': 1, 'last_id': None}) as mock_poll:
             call_command('poll_ethos_messages', '--limit', '5', '--max-batches', '2',
                          stdout=StringIO())
@@ -161,7 +162,7 @@ class PollCommandGateTests(TestCase):
         _seed(is_active='No')
         out = StringIO()
 
-        with patch('ethos.ethos.library.ethos.Ethos.available_message_count', return_value=27):
+        with patch(f'{PKG}.library.ethos.Ethos.available_message_count', return_value=27):
             call_command('poll_ethos_messages', '--peek', stdout=out)
 
         self.assertIn('27', out.getvalue())
@@ -191,7 +192,7 @@ class CronSignalTests(TestCase):
     def _poll(self, *args, **stored):
         result = {'stored': 0, 'duplicates': 0, 'batches': 1, 'last_id': None}
         result.update(stored)
-        with patch('ethos.ethos.management.commands.poll_ethos_messages.poll',
+        with patch(f'{PKG}.management.commands.poll_ethos_messages.poll',
                    return_value=result):
             call_command('poll_ethos_messages', *args, stdout=StringIO())
 
@@ -218,7 +219,7 @@ class CronSignalTests(TestCase):
         """A silent no-op would look identical to a broken cron."""
         _seed(is_active='No')
 
-        with patch('ethos.ethos.management.commands.poll_ethos_messages.poll') as mock_poll:
+        with patch(f'{PKG}.management.commands.poll_ethos_messages.poll') as mock_poll:
             call_command('poll_ethos_messages', '--time', '2026-08-15 10:00:00', stdout=StringIO())
 
         mock_poll.assert_not_called()
@@ -229,7 +230,7 @@ class CronSignalTests(TestCase):
     def test_failed_run_records_the_error_then_raises(self):
         _seed(is_active='Yes')
 
-        with patch('ethos.ethos.management.commands.poll_ethos_messages.poll',
+        with patch(f'{PKG}.management.commands.poll_ethos_messages.poll',
                    side_effect=ValueError('queue exploded')):
             with self.assertRaises(ValueError):
                 call_command('poll_ethos_messages', '--time', '2026-08-15 10:00:00',
@@ -242,7 +243,7 @@ class CronSignalTests(TestCase):
     def test_peek_emits_no_signals(self):
         _seed(is_active='Yes')
 
-        with patch('ethos.ethos.library.ethos.Ethos.available_message_count', return_value=0):
+        with patch(f'{PKG}.library.ethos.Ethos.available_message_count', return_value=0):
             call_command('poll_ethos_messages', '--peek', '--time', '2026-08-15 10:00:00',
                          stdout=StringIO())
 
@@ -252,9 +253,9 @@ class CronSignalTests(TestCase):
 
 class ConsumeAfterPollTests(TestCase):
     def _run(self):
-        with patch('ethos.ethos.management.commands.poll_ethos_messages.poll',
+        with patch(f'{PKG}.management.commands.poll_ethos_messages.poll',
                    return_value={'stored': 1, 'duplicates': 0, 'batches': 1, 'last_id': 1}), \
-             patch('ethos.ethos.management.commands.poll_ethos_messages.call_command') as chained:
+             patch(f'{PKG}.management.commands.poll_ethos_messages.call_command') as chained:
             call_command('poll_ethos_messages', stdout=StringIO())
         return chained
 

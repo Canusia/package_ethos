@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.signals import user_logged_in
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from . import PKG
 
 if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.models import EthosMessage
@@ -17,7 +18,7 @@ except Exception:  # pragma: no cover
     _login_history_post_login = None
 
 HANDLERS = {'section-registrations':
-            'ethos.ethos.tests.test_consume_service.RecordingHandler'}
+            f'{PKG}.tests.test_consume_service.RecordingHandler'}
 
 User = get_user_model()
 
@@ -162,7 +163,7 @@ class MessageViewTests(TestCase):
         self.assertEqual(resp.status_code, 200)
 
     @override_settings(ETHOS_CONSUME_HANDLERS={
-        'section-registrations': 'ethos.ethos.tests.test_consume_views.PlanExplodingHandler'})
+        'section-registrations': f'{PKG}.tests.test_consume_views.PlanExplodingHandler'})
     def test_dry_run_renders_plan_error_instead_of_500(self):
         # message_dry_run exists so an operator can safely inspect a
         # half-written handler. consume_message() deliberately re-raises
