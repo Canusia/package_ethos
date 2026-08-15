@@ -49,6 +49,12 @@ var STATUS_COLORS = {
     skipped: 'light', flagged: 'warning',
 };
 
+function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : s;
+    return d.innerHTML;
+}
+
 $(document).ready(function () {
   var table = $('#messages_table').DataTable({
     dom: 'B<"float-left mt-3 mb-3"l><"float-right mt-3"f><"row clear">rt<"row"<"col-6"i><"col-6 float-right"p>>',
@@ -62,27 +68,27 @@ $(document).ready(function () {
     lengthMenu: [30, 50, 100],
     order: [[0, 'desc']],
     columns: [
-      { render: function (data) { return '<small>' + data + '</small>'; } },
-      { render: function (data) { return data ? '<small>' + data + '</small>' : '&mdash;'; } },
-      { render: function (data) { return '<code style="font-size:0.8rem;">' + data + '</code>'; } },
-      { render: function (data) { return '<span class="text-muted small">' + data + '</span>'; } },
+      { render: function (data) { return '<small>' + esc(data) + '</small>'; } },
+      { render: function (data) { return data ? '<small>' + esc(data) + '</small>' : '&mdash;'; } },
+      { render: function (data) { return '<code style="font-size:0.8rem;">' + esc(data) + '</code>'; } },
+      { render: function (data) { return '<span class="text-muted small">' + esc(data) + '</span>'; } },
       {
         orderable: false,
         searchable: false,
-        render: function (data) { return data ? '<span class="text-muted small">' + data + '</span>' : '&mdash;'; }
+        render: function (data) { return data ? '<span class="text-muted small">' + esc(data) + '</span>' : '&mdash;'; }
       },
       {
         render: function (data) {
           var cls = STATUS_COLORS[data] || 'secondary';
-          return '<span class="badge badge-' + cls + '">' + data + '</span>';
+          return '<span class="badge badge-' + cls + '">' + esc(data) + '</span>';
         }
       },
-      { render: function (data) { return data ? '<small>' + data + '</small>' : '&mdash;'; } },
+      { render: function (data) { return data ? '<small>' + esc(data) + '</small>' : '&mdash;'; } },
       {
         searchable: false,
         orderable: false,
         render: function (data, type, row) {
-          return '<button class="btn btn-sm btn-outline-secondary detail-btn" data-pk="' + data + '">Details</button>';
+          return '<button class="btn btn-sm btn-outline-secondary detail-btn" data-pk="' + esc(data) + '">Details</button>';
         }
       }
     ]
