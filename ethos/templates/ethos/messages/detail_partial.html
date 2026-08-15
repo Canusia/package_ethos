@@ -1,0 +1,95 @@
+{% load templatehelpers %}
+<div class="modal-header">
+  <div>
+    <h5 class="modal-title mb-0">
+      <span class="badge badge-secondary mr-1">#{{ message.queue_id }}</span>
+      <code style="font-size:0.9rem;">{{ message.resource_name }}</code>
+    </h5>
+    <small class="text-muted">{{ message.published_on|date:"m/d/Y g:i:s A" }} &nbsp;&middot;&nbsp; {{ message.operation }}</small>
+  </div>
+  <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+</div>
+
+<div class="modal-body">
+  <div class="mb-3">
+    <form method="post" action="{% url 'ethos:ethos_message_dry_run' message.pk %}"
+          class="d-inline js-plan-form">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-secondary btn-sm">Dry run</button>
+    </form>
+    <form method="post" action="{% url 'ethos:ethos_message_consume' message.pk %}"
+          class="d-inline js-plan-form">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary btn-sm">Consume</button>
+    </form>
+  </div>
+
+  <div id="plan-result" class="mb-3"></div>
+
+  <div class="row">
+
+    <!-- Left: Envelope -->
+    <div class="col-md-6">
+      <h6 class="text-uppercase text-muted font-weight-bold mb-2" style="font-size:0.7rem; letter-spacing:0.05em;">Envelope</h6>
+
+      <table class="table table-sm table-borderless mb-3" style="font-size:0.85rem;">
+        <tr><th class="text-muted pl-0" style="width:35%;">Queue ID</th><td>{{ message.queue_id }}</td></tr>
+        <tr><th class="text-muted pl-0">Published</th><td>{{ message.published_on|date:"m/d/Y g:i:s A" }}</td></tr>
+        <tr><th class="text-muted pl-0">Resource</th><td><code>{{ message.resource_name }}</code></td></tr>
+        <tr><th class="text-muted pl-0">Resource ID</th><td><code style="font-size:0.78rem; word-break:break-all;">{{ message.resource_id }}</code></td></tr>
+        <tr><th class="text-muted pl-0">Operation</th><td>{{ message.operation }}</td></tr>
+        {% if message.sis_message_id %}
+        <tr><th class="text-muted pl-0">Message ID</th><td><code style="font-size:0.78rem; word-break:break-all;">{{ message.sis_message_id }}</code></td></tr>
+        {% endif %}
+        {% if message.initiated_on %}
+        <tr><th class="text-muted pl-0">Initiated</th><td>{{ message.initiated_on|date:"m/d/Y g:i:s A" }}</td></tr>
+        {% endif %}
+        <tr><th class="text-muted pl-0">Publisher</th><td>{{ message.publisher_id|default:"—" }}</td></tr>
+      </table>
+    </div>
+
+    <!-- Right: Consume Result -->
+    <div class="col-md-6">
+      <h6 class="text-uppercase text-muted font-weight-bold mb-2" style="font-size:0.7rem; letter-spacing:0.05em;">Consume Result</h6>
+
+      <p class="mb-2">
+        <span class="badge badge-{% if message.status == 'consumed' %}success{% elif message.status == 'failed' %}danger{% elif message.status == 'flagged' %}warning{% elif message.status == 'skipped' %}light{% else %}secondary{% endif %} mr-1" style="font-size:0.85rem;">{{ message.status }}</span>
+      </p>
+
+      <table class="table table-sm table-borderless mb-2" style="font-size:0.85rem;">
+        <tr><th class="text-muted pl-0" style="width:35%;">Consumed At</th><td>{{ message.consumed_at|date:"m/d/Y g:i:s A"|default:"—" }}</td></tr>
+        <tr><th class="text-muted pl-0">Action</th><td>{{ message.action|default:"—" }}</td></tr>
+        <tr><th class="text-muted pl-0">Action Detail</th><td>{{ message.action_detail|default:"—" }}</td></tr>
+        {% if message.target_label %}
+        <tr><th class="text-muted pl-0">Target</th><td>{{ message.target_label }}</td></tr>
+        {% endif %}
+      </table>
+
+      {% if message.error %}
+      <p class="text-muted small font-weight-bold mb-1">Error</p>
+      <pre class="bg-light border rounded p-2 text-danger" style="font-size:0.75rem; max-height:150px; overflow:auto;">{{ message.error }}</pre>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <p class="text-muted small font-weight-bold mb-1">Payload</p>
+      <pre class="bg-light border rounded p-2" style="font-size:0.75rem; max-height:250px; overflow:auto;">{{ payload_fmt }}</pre>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.js-plan-form').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        fetch(form.action, {method: 'POST', body: new FormData(form)})
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                document.getElementById('plan-result').innerHTML = html;
+            });
+    });
+});
+</script>

@@ -1,0 +1,33 @@
+{% if plan is None %}
+  <div class="alert alert-secondary mb-0">
+    No handler is configured for <code>{{ message.resource_name }}</code>.
+  </div>
+{% else %}
+  {% if dry_run %}
+    <div class="alert alert-info">Dry run — nothing was written.</div>
+  {% endif %}
+  {% if plan.blocked %}
+    <div class="alert alert-warning">
+      <strong>Blocked:</strong> {{ plan.reason|default:plan.summary }}
+    </div>
+  {% endif %}
+  <dl class="row mb-2">
+    <dt class="col-3">Action</dt><dd class="col-9"><code>{{ plan.action }}</code></dd>
+    <dt class="col-3">Summary</dt><dd class="col-9">{{ plan.summary }}</dd>
+    {% if plan.target_label %}
+      <dt class="col-3">Target</dt><dd class="col-9">{{ plan.target_label }}</dd>
+    {% endif %}
+  </dl>
+  {% if plan.changes %}
+    <table class="table table-sm">
+      <thead><tr><th>Field</th><th>From</th><th>To</th></tr></thead>
+      <tbody>
+        {% for change in plan.changes %}
+          <tr><td>{{ change.field }}</td><td>{{ change.old }}</td><td>{{ change.new }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="text-muted mb-0">No field changes.</p>
+  {% endif %}
+{% endif %}

@@ -1,0 +1,115 @@
+{% extends "cis/logged-base.html" %}
+
+{% block title %}Ethos Messages{% endblock %}
+
+{% block body %}
+<main>
+
+  <div class="row align-items-center mb-3">
+    <div class="col">
+      <h1 class="h3 mb-0 text-gray-800">Ethos Messages</h1>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <table id="messages_table" class="table table-striped responsive" style="width:100%">
+        <thead>
+          <tr>
+            <th data-data="queue_id"       data-name="queue_id">Queue ID</th>
+            <th data-data="published_on"   data-name="published_on">Published On</th>
+            <th data-data="resource_name"  data-name="resource_name">Resource</th>
+            <th data-data="operation"      data-name="operation">Operation</th>
+            <th data-data="status_reason"  data-name="status_reason" data-orderable="false" data-searchable="false">Reason</th>
+            <th data-data="status"         data-name="status">Status</th>
+            <th data-data="consumed_at"    data-name="consumed_at">Consumed At</th>
+            <th data-data="id"             data-name="id"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- Message detail modal -->
+<div class="modal fade" id="message-modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-xl" role="document">
+    <div class="modal-content" id="message-modal-content">
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"><span class="sr-only">Loading…</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var STATUS_COLORS = {
+    pending: 'secondary', consumed: 'success', failed: 'danger',
+    skipped: 'light', flagged: 'warning',
+};
+
+$(document).ready(function () {
+  var table = $('#messages_table').DataTable({
+    dom: 'B<"float-left mt-3 mb-3"l><"float-right mt-3"f><"row clear">rt<"row"<"col-6"i><"col-6 float-right"p>>',
+    buttons: [
+      { extend: 'csv',   className: 'btn btn-sm btn-primary text-white', text: '<i class="fas fa-file-csv"></i>&nbsp;CSV' },
+      { extend: 'print', className: 'btn btn-sm btn-primary text-white', text: '<i class="fas fa-print"></i>&nbsp;Print' }
+    ],
+    ajax: '{{ api_url }}',
+    serverSide: true,
+    processing: true,
+    lengthMenu: [30, 50, 100],
+    order: [[0, 'desc']],
+    columns: [
+      { render: function (data) { return '<small>' + data + '</small>'; } },
+      { render: function (data) { return data ? '<small>' + data + '</small>' : '&mdash;'; } },
+      { render: function (data) { return '<code style="font-size:0.8rem;">' + data + '</code>'; } },
+      { render: function (data) { return '<span class="text-muted small">' + data + '</span>'; } },
+      {
+        orderable: false,
+        searchable: false,
+        render: function (data) { return data ? '<span class="text-muted small">' + data + '</span>' : '&mdash;'; }
+      },
+      {
+        render: function (data) {
+          var cls = STATUS_COLORS[data] || 'secondary';
+          return '<span class="badge badge-' + cls + '">' + data + '</span>';
+        }
+      },
+      { render: function (data) { return data ? '<small>' + data + '</small>' : '&mdash;'; } },
+      {
+        searchable: false,
+        orderable: false,
+        render: function (data, type, row) {
+          return '<button class="btn btn-sm btn-outline-secondary detail-btn" data-pk="' + data + '">Details</button>';
+        }
+      }
+    ]
+  });
+
+  setInterval(function () {
+    if (!table.rows('.selected').any()) table.ajax.reload(function () {}, false);
+  }, 60 * 1000);
+
+  $(document).on('click', '.detail-btn', function () {
+    var pk = $(this).data('pk');
+    var url = '/ce/ethos/messages/' + pk + '/';
+    var $modal = $('#message-modal');
+    var $content = $('#message-modal-content');
+
+    $content.html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="sr-only">Loading…</span></div></div>');
+    $modal.modal('show');
+
+    $.ajax({
+      url: url,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      success: function (html) { $content.html(html); },
+      error: function () {
+        $content.html('<div class="modal-header"><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div><div class="modal-body text-danger">Failed to load message details.</div>');
+      }
+    });
+  });
+});
+</script>
+{% endblock %}
