@@ -15,6 +15,10 @@ from .views.sections import (
 )
 from .views.resources import resources_list, resources_sync, resource_detail, resource_set_preferred, EthosResourceViewSet
 from .views.logs import logs_list, log_detail, EthosLogViewSet
+from .views.messages import (
+    messages_list, message_detail, message_dry_run, message_consume,
+    EthosMessageViewSet,
+)
 
 app_name = 'ethos'
 
@@ -28,6 +32,7 @@ def _has_cis_role(user):
 router = routers.DefaultRouter()
 router.register('ethos-resource', EthosResourceViewSet, basename='ethos-resource')
 router.register('ethos-log', EthosLogViewSet, basename='ethos-log')
+router.register('ethos-message', EthosMessageViewSet, basename='ethos-message')
 
 urlpatterns = [
     path('api/', include(router.urls)),
@@ -48,4 +53,9 @@ urlpatterns = [
 
     path('logs/', user_passes_test(_has_cis_role, login_url='/')(logs_list), name='ethos_logs'),
     path('logs/<int:pk>/', user_passes_test(_has_cis_role, login_url='/')(log_detail), name='ethos_log_detail'),
+
+    path('messages/', user_passes_test(_has_cis_role, login_url='/')(messages_list), name='ethos_messages'),
+    path('messages/<int:pk>/', user_passes_test(_has_cis_role, login_url='/')(message_detail), name='ethos_message_detail'),
+    path('messages/<int:pk>/dry-run/', user_passes_test(_has_cis_role, login_url='/')(message_dry_run), name='ethos_message_dry_run'),
+    path('messages/<int:pk>/consume/', user_passes_test(_has_cis_role, login_url='/')(message_consume), name='ethos_message_consume'),
 ]

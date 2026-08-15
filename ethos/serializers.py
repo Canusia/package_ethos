@@ -2,7 +2,7 @@ from urllib.parse import unquote
 
 from rest_framework import serializers
 
-from .models import EthosLog, EthosResource
+from .models import EthosLog, EthosResource, EthosMessage
 
 
 class EthosResourceSerializer(serializers.ModelSerializer):
@@ -57,4 +57,17 @@ class EthosLogSerializer(serializers.ModelSerializer):
             'id', 'sent_on', 'method', 'path', 'url',
             'message_type', 'description', 'response_status', 'success',
         ]
+        datatables_always_serialize = ['id']
+
+
+class EthosMessageSerializer(serializers.ModelSerializer):
+    published_on = serializers.DateTimeField(format='%Y-%m-%d %I:%M %p', read_only=True)
+    consumed_at  = serializers.DateTimeField(format='%Y-%m-%d %I:%M %p', read_only=True)
+    status_reason = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = EthosMessage
+        fields = ['id', 'queue_id', 'published_on', 'resource_name', 'resource_id',
+                  'operation', 'status_reason', 'status', 'action', 'consumed_at',
+                  'target_label']
         datatables_always_serialize = ['id']
