@@ -124,3 +124,92 @@ class EthosRepresentation(models.Model):
 
     def __str__(self):
         return f"{self.resource.name} — {self.x_media_type}"
+
+
+class EthosMessage(models.Model):
+    """A single Ethos change-notification, with its consume result."""
+
+    PENDING  = 'pending'
+    CONSUMED = 'consumed'
+    FAILED   = 'failed'
+    SKIPPED  = 'skipped'
+    FLAGGED  = 'flagged'
+
+    STATUS_CHOICES = [
+        (PENDING,  'Pending'),
+        (CONSUMED, 'Consumed'),
+        (FAILED,   'Failed'),
+        (SKIPPED,  'Skipped'),
+        (FLAGGED,  'Flagged'),
+    ]
+
+    # --- envelope -------------------------------------------------------
+    queue_id         = models.BigIntegerField(db_index=True)          # Ethos `id`, not a GUID
+    published_on     = models.DateTimeField(null=True, blank=True, db_index=True)
+    received_on      = models.DateTimeField(auto_now_add=True, db_index=True)
+    resource_name    = models.CharField(max_length=100, db_index=True)
+    resource_id      = models.CharField(max_length=64, db_index=True)
+    resource_version = models.CharField(max_length=200, blank=True)
+    operation        = models.CharField(max_length=20, db_index=True)
+    content_type     = models.CharField(max_length=50, blank=True)
+    message_type     = models.CharField(max_length=50, blank=True)
+    sis_message_id   = models.CharField(max_length=50, blank=True)    # optional `messageId`
+    initiated_on     = models.DateTimeField(null=True, blank=True)    # optional `initiated`
+    publisher_id     = models.CharField(max_length=64, blank=True)
+    payload          = models.JSONField(default=dict)                 # the whole notification, verbatim
+
+    # --- consume result (single, overwritten on re-run) -----------------
+    status        = models.CharField(max_length=10, choices=STATUS_CHOICES,
+                                     default=PENDING, db_index=True)
+    consumed_at   = models.DateTimeField(null=True, blank=True, db_index=True)
+    action        = models.CharField(max_length=50, blank=True)
+    action_detail = models.TextField(blank=True)
+    error         = models.TextField(blank=True)
+    target_type   = models.CharField(max_length=100, blank=True)   # e.g. 'cis.StudentRegistration'
+    target_pk     = models.CharField(max_length=64, blank=True)
+    target_label  = models.CharField(max_length=255, blank=True)   # survives target deletion
+
+    class Meta:
+        ordering = ['-queue_id']
+        indexes = [
+            models.Index(fields=['resource_name', 'status']),
+        ]
+
+    def __str__(self):
+        return f"#{self.queue_id} {self.resource_name} {self.operation} [{self.status}]"
+
+    @property
+    def is_pending(self):
+        return self.status == self.PENDING
+
+    @property
+    def content(self):
+        """The resource body carried by the notification."""
+        return (self.payload or {}).get('content') or {}
+
+    @property
+    def status_reason(self):
+        """`sectionRegistrationStatusReason` when present — the real action signal."""
+        return (self.content.get('status') or {}).get('sectionRegistrationStatusReason') or ''
+
+
+class EthosConsumeCursor(models.Model):
+    """Singleton queue pointer.
+
+    Deliberately a table rather than MAX(queue_id) over EthosMessage: retention
+    deletes rows, and a cursor derived from a purged table would replay the whole
+    retention window after the first purge.
+    """
+
+    last_processed_id = models.BigIntegerField(default=0)
+    last_polled_at    = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"cursor@{self.last_processed_id}"
+
+    @classmethod
+    def load(cls):
+        cursor = cls.objects.order_by('pk').first()
+        if cursor is None:
+            cursor = cls.objects.create()
+        return cursor
