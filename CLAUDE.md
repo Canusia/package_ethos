@@ -21,6 +21,8 @@ ethos/                           ← git submodule root (outer package)
     ├── apps.py                  # EthosConfig (prod) + DevEthosConfig (dev)
     ├── models.py                # EthosLog, EthosApplication, EthosResource, EthosRepresentation, EthosMessage, EthosConsumeCursor
     ├── serializers.py           # DRF serializers for EthosResource, EthosLog, EthosMessage
+    ├── settings/                # DB-backed configuration
+    │   └── ethos_consume.py     # Operator settings: poll on/off, limit, batches, consume-after-poll, cron
     ├── consume/                 # Change-notification consume framework
     │   ├── adapter.py           # parse_notification() — the only place that knows Ethos's envelope field names
     │   ├── config.py            # getattr(settings, ...) accessors for the five ETHOS_CONSUME_* / ETHOS_LOG_RETENTION_DAYS keys
@@ -180,6 +182,34 @@ holding `last_processed_id` and `last_polled_at`. It is a real table rather
 than `MAX(queue_id)` over `EthosMessage` because retention purges delete rows;
 a cursor derived from a purged table would replay the whole retention window
 after the first purge.
+
+### Two tiers of consume configuration
+
+**Operator-tunable** — the `ethos.settings.ethos_consume` Setting, edited at
+`/ce/settings/` ("Ethos Change Notifications"): `is_active` (the master poll
+switch), `limit` (1-1000 per request), `max_batches` (requests per run),
+`consume_after_poll`, and `cron`. Saving it upserts the `CronTab` row for
+`poll_ethos_messages`, so the schedule is a setting field. `install()` seeds
+both the row and the cron, with `is_active = No` — installing the release
+changes no behavior until someone switches it on.
+
+**Deployment-level** — `ETHOS_CONSUME_RETENTION_DAYS`, `ETHOS_LOG_RETENTION_DAYS`,
+`ETHOS_CONSUME_AUTO`, `ETHOS_CONSUME_HANDLERS`, read from Django settings
+(fed by `SECRETS`). These stay out of the web form deliberately: retention
+governs data destruction, and the auto-consume map plus handler registry decide
+what mutates student records.
+
+`consume/config.py` is the seam. The Setting wins when it holds a usable value;
+an out-of-range or non-numeric value counts as *unconfigured* and falls through
+to the Django-settings key, so a bad form value degrades to the default rather
+than breaking the poller.
+
+Note the Setting's `key` is the stable literal `'ethos.settings.ethos_consume'`,
+not `str(__name__)`. This package runs under two import roots, so a `__name__`-
+derived key would point at a different Setting row in pip-installed vs submodule
+mode and orphan the operator's configuration on the move between them. The
+`CONFIGURATORS` `'app'` key does differ per config (`ethos` vs `ethos.ethos`) —
+that one has to.
 
 ### Queue-id monotonicity (open question)
 

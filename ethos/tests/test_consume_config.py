@@ -1,7 +1,7 @@
 """Config defaults so a tenant that sets nothing still works."""
 import importlib.util
 
-from django.test import SimpleTestCase, override_settings
+from django.test import TestCase, override_settings
 
 if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.consume import config
@@ -9,7 +9,11 @@ else:
     from ethos.consume import config
 
 
-class ConfigDefaultTests(SimpleTestCase):
+# TestCase, not SimpleTestCase: consume_limit()/max_batches() consult the
+# operator-facing `ethos.settings.ethos_consume` Setting before falling back to
+# these Django-settings keys, so they touch the DB. The assertions below run
+# with no Setting row present, which is exactly the fallback path.
+class ConfigDefaultTests(TestCase):
     def test_defaults(self):
         self.assertEqual(config.consume_limit(), 100)
         self.assertEqual(config.retention_days(), 30)

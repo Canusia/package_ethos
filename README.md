@@ -233,12 +233,38 @@ never talks to Ethos.
 > (a `HEAD /consume` request) to check queue depth with no side effects at
 > all — it never advances anything.
 
+### Turning it on
+
+Polling is configured at **Settings > Ethos Change Notifications**
+(`ethos.settings.ethos_consume`) and ships **off**:
+
+| Field | Default | Meaning |
+|---|---|---|
+| Enable Polling | `No` | Master switch. While No, the scheduled job exits immediately without calling Ethos. |
+| Notifications per Request | `100` | Per `/consume` call, 1–1000. Ethos also caps the response at 1 MB, so fewer may return than requested. |
+| Batches per Run | `1` | Requests per scheduled run. Request size × batches is the ceiling one run can read — raise it if the queue grows faster than the schedule drains it. |
+| Consume After Polling | `No` | When Yes, a run also dispatches what it stored. Each resource must **also** be enabled in `ETHOS_CONSUME_AUTO`, so this alone changes nothing. |
+| Cron Expression | `0 * * * *` | Saving the setting upserts the `CronTab` row for `poll_ethos_messages`. |
+
+`register_settings` seeds the setting **and** the cron row, so enabling the
+feature is a single field change. Because the command exits early while
+Enable Polling is No, the cron row is harmless until you flip it.
+
+Verify before switching on — `--peek` works even while polling is off, and
+`--force` runs a one-off poll without enabling the schedule:
+
+```bash
+python manage.py poll_ethos_messages --peek              # is the subscription wired?
+python manage.py poll_ethos_messages --force --limit 5   # one small real batch
+```
+
 ### Commands
 
 ```bash
 # Store notifications (never consumes)
 python manage.py poll_ethos_messages --peek                    # queue depth only, HEAD /consume, no side effects
-python manage.py poll_ethos_messages                            # one batch, default limit
+python manage.py poll_ethos_messages                            # one batch, configured limit
+python manage.py poll_ethos_messages --force                    # run even while polling is switched off
 python manage.py poll_ethos_messages --limit 250 --max-batches 5
 python manage.py poll_ethos_messages --from-id 1042              # replay from a known-good id, ignoring the stored cursor
 
