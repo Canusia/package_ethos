@@ -21,6 +21,23 @@ HANDLERS = {'section-registrations':
 
 User = get_user_model()
 
+if importlib.util.find_spec('ethos.ethos'):
+    from ethos.ethos.consume.base import ConsumeHandler
+else:
+    from ethos.consume.base import ConsumeHandler
+
+
+class PlanExplodingHandler(ConsumeHandler):
+    """A handler whose plan() blows up — simulates a half-written handler
+    being exercised via the dry-run panel."""
+    resource_name = 'section-registrations'
+
+    def plan(self, message):
+        raise RuntimeError('boom from plan()')
+
+    def apply(self, message, plan):
+        raise AssertionError('apply() must never be reached in dry-run')
+
 
 def _message(queue_id=1, **kwargs):
     defaults = dict(queue_id=queue_id, resource_name='section-registrations',
@@ -120,9 +137,43 @@ class MessageViewTests(TestCase):
     def test_api_requires_authentication(self):
         # cis.middleware.LoginRequiredMiddleware wraps every non-whitelisted
         # view (including DRF viewsets) in `login_required`, so an
-        # unauthenticated request never reaches the viewset's own
-        # IsAuthenticated permission check — it is redirected (302) before
-        # DRF gets a chance to return 401/403. The viewset still declares
-        # permission_classes=[IsAuthenticated] as defense in depth.
+        # unauthenticated request never reaches the viewset's own permission
+        # check — it is redirected (302) before DRF gets a chance to return
+        # 401/403. The viewset still declares its own permission class as
+        # defense in depth.
         resp = self.client.get('/ce/ethos/api/ethos-message/?format=json')
         self.assertEqual(resp.status_code, 302)
+
+    def test_api_denies_authenticated_non_ce_user(self):
+        # EthosMessage rows can carry a student's name in target_label (a
+        # handler populates it), so a logged-in student/instructor must not
+        # be able to list this API even though they pass authentication —
+        # the pages themselves are gated to the 'ce' role and the API must
+        # match.
+        user = User.objects.create_user(username='student@test.edu',
+                                        email='student@test.edu', password='pw')
+        self.client.force_login(user)
+        resp = self.client.get('/ce/ethos/api/ethos-message/?format=json')
+        self.assertEqual(resp.status_code, 403)
+
+    def test_api_allows_ce_user(self):
+        self._login_ce()
+        resp = self.client.get('/ce/ethos/api/ethos-message/?format=json')
+        self.assertEqual(resp.status_code, 200)
+
+    @override_settings(ETHOS_CONSUME_HANDLERS={
+        'section-registrations': 'ethos.ethos.tests.test_consume_views.PlanExplodingHandler'})
+    def test_dry_run_renders_plan_error_instead_of_500(self):
+        # message_dry_run exists so an operator can safely inspect a
+        # half-written handler. consume_message() deliberately re-raises
+        # plan() failures in dry-run mode, so the view must catch that and
+        # render it into the panel rather than surfacing a Django 500 page.
+        self._login_ce()
+        resp = self.client.post(
+            reverse('ethos:ethos_message_dry_run', args=[self.message.pk]))
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'plan() raised an error')
+        self.assertContains(resp, 'boom from plan()')
+        self.message.refresh_from_db()
+        self.assertEqual(self.message.status, EthosMessage.PENDING)

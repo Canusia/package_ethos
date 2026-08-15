@@ -26,9 +26,33 @@ def _get_client():
     return Ethos()
 
 
+def _sort_key(record):
+    """Sort by numeric id when possible, without ever raising.
+
+    One record with a missing/non-numeric id must not abort the whole batch's
+    sort — Ethos has already advanced its pointer past every record in this
+    batch (see module docstring), so discarding the well-formed records to
+    preserve strictness about one malformed one is the wrong trade. Malformed
+    records sort last and are individually rejected by `parse_notification`
+    inside `_store_good_records` below.
+    """
+    try:
+        return (0, int(record.get('id')))
+    except (TypeError, ValueError):
+        return (1, 0)
+
+
 @transaction.atomic
-def _store_batch(records):
-    """Persist one batch and advance the cursor. Atomic by design.
+def _store_good_records(records):
+    """Persist every well-formed record in the batch and advance the cursor.
+
+    Atomic by design — a genuine mid-batch failure (e.g. the cursor save
+    itself blowing up) must still roll back to zero trace, so a crash before
+    commit replays cleanly from the unchanged cursor. A malformed individual
+    record is NOT treated as that kind of failure: it is skipped here (logged)
+    and reported by the caller, `_store_batch`, only after this transaction
+    has already committed the good records — so one bad record never rolls
+    back the good ones.
 
     `queue_id` is intentionally not unique at the DB layer (see the model), so
     duplicates are checked with exists()-then-create() rather than
@@ -37,11 +61,18 @@ def _store_batch(records):
     """
     stored = duplicates = 0
     highest = None
+    malformed = []
     ids = [r.get('id') for r in records]
 
     try:
-        for raw in sorted(records, key=lambda r: int(r.get('id'))):
-            fields = parse_notification(raw)
+        for raw in sorted(records, key=_sort_key):
+            try:
+                fields = parse_notification(raw)
+            except (TypeError, ValueError) as e:
+                logger.exception('Malformed Ethos notification skipped (id=%r)', raw.get('id'))
+                malformed.append(raw.get('id'))
+                continue
+
             queue_id = fields['queue_id']
 
             if EthosMessage.objects.filter(queue_id=queue_id).exists():
@@ -62,6 +93,26 @@ def _store_batch(records):
         # docstring) — this traceback is the only record of which ids were lost.
         logger.exception('Failed to store Ethos notification batch (ids=%s)', ids)
         raise
+
+    return stored, duplicates, highest, malformed
+
+
+def _store_batch(records):
+    """Persist the batch, then raise loudly if any record was malformed.
+
+    The malformed check happens OUTSIDE `_store_good_records`'s atomic block
+    on purpose: the good records and the cursor advance must already be
+    committed before we raise, so the operator's loud failure never costs the
+    well-formed notifications that Ethos has already advanced past.
+    """
+    stored, duplicates, highest, malformed = _store_good_records(records)
+
+    if malformed:
+        raise ValueError(
+            f'{len(malformed)} malformed notification(s) skipped in this batch '
+            f'(ids={malformed}); {stored} well-formed record(s) were stored and '
+            f'the cursor was advanced before this error — see the log above for detail.'
+        )
 
     return stored, duplicates, highest
 

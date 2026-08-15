@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.clickjacking import xframe_options_exempt
 
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission
 
 from cis.menu import cis_menu, draw_menu
 
@@ -16,9 +16,22 @@ from ..serializers import EthosMessageSerializer
 from ..consume.service import consume_message
 
 
+class HasCERole(BasePermission):
+    """Mirrors urls.py's `_has_cis_role` page gate: anonymous denied, 'ce' role
+    required. EthosMessage rows can carry a student's name in target_label, so
+    the API must be gated the same as the pages that display it — otherwise
+    any logged-in student/instructor could list this endpoint directly."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        if user.is_anonymous:
+            return False
+        return 'ce' in user.get_roles()
+
+
 class EthosMessageViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = EthosMessageSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasCERole]
     queryset = EthosMessage.objects.all()
 
     def get_queryset(self):
@@ -59,9 +72,18 @@ def message_dry_run(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     message = get_object_or_404(EthosMessage, pk=pk)
-    plan = consume_message(message, dry_run=True)
+    error = None
+    try:
+        plan = consume_message(message, dry_run=True)
+    except Exception as exc:
+        # consume_message() deliberately re-raises plan() failures in dry-run
+        # mode. The dry-run panel exists to safely inspect a half-written
+        # handler, so a raised exception must render into the panel, not
+        # bubble up into a Django 500 page.
+        plan = None
+        error = str(exc)
     return render(request, 'ethos/messages/_plan.html', {
-        'message': message, 'plan': plan, 'dry_run': True,
+        'message': message, 'plan': plan, 'dry_run': True, 'error': error,
     })
 
 

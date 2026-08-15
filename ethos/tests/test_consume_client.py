@@ -72,6 +72,17 @@ class GetMessagesTests(TestCase):
         self.assertEqual(records, [])
         self.assertEqual(log.response_status, 500)
 
+    def test_raises_on_200_with_unparseable_body(self):
+        """A 200 that fails to parse as JSON still means Ethos's queue pointer
+        has already advanced — this must never be indistinguishable from an
+        empty queue, so it must raise rather than return []."""
+        resp = _resp(status=200, text='not json')
+        resp.json.side_effect = ValueError('no JSON object could be decoded')
+        with patch.object(self.ethos, 'get_auth_token', return_value='tok'), \
+             patch('requests.get', return_value=resp):
+            with self.assertRaises(ValueError):
+                self.ethos.get_messages(limit=10)
+
 
 class AvailableMessageCountTests(TestCase):
     def setUp(self):
@@ -89,6 +100,15 @@ class AvailableMessageCountTests(TestCase):
         with patch.object(self.ethos, 'get_auth_token', return_value='tok'), \
              patch('requests.head', return_value=_resp(headers={})):
             self.assertEqual(self.ethos.available_message_count(), 0)
+
+    def test_raises_rather_than_under_reporting_on_error_status(self):
+        """--peek is the one side-effect-free primitive an operator has for
+        checking queue depth; on a failed request (e.g. bad credentials) it
+        must never silently report 0 as if the queue were empty."""
+        with patch.object(self.ethos, 'get_auth_token', return_value='tok'), \
+             patch('requests.head', return_value=_resp(status=401, headers={'x-remaining': '5'})):
+            with self.assertRaises(ValueError):
+                self.ethos.available_message_count()
 
 
 class ApiRequestMethodTests(TestCase):

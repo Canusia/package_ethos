@@ -78,19 +78,37 @@ class PollerTests(TestCase):
         self.assertEqual(EthosMessage.objects.count(), 27)
         self.assertEqual(result['duplicates'], 27)
 
-    def test_malformed_queue_id_aborts_batch_before_any_write(self):
-        """A record whose id can't be parsed as an int blows up in the sort key,
-        before any row is created or the cursor is touched — this is a guard on
-        the parse step, not a test of transactional rollback."""
+    def test_malformed_queue_id_still_stores_the_good_records_in_the_batch(self):
+        """A record whose id can't be parsed as an int must not cost the other,
+        well-formed records in the batch — Ethos has already advanced its
+        pointer past all of them. The good record is stored, the cursor
+        advances to cover it, and the caller still learns loudly (ValueError)
+        that one record was malformed."""
         bad = dict(self.sample[0])
         bad['id'] = 'not-a-number'
-        client = fake_client([[self.sample[0], bad]])
+        good = self.sample[1]
+        client = fake_client([[good, bad]])
 
         with self.assertRaises(ValueError):
             poll(client=client, limit=100)
 
-        self.assertEqual(EthosConsumeCursor.load().last_processed_id, 0)
-        self.assertEqual(EthosMessage.objects.count(), 0)
+        self.assertEqual(EthosMessage.objects.count(), 1)
+        self.assertEqual(EthosMessage.objects.get().queue_id, int(good['id']))
+        self.assertEqual(EthosConsumeCursor.load().last_processed_id, int(good['id']))
+
+    def test_malformed_record_is_logged_and_raised_after_good_records_persist(self):
+        """Both properties must hold: the good record is committed, AND the
+        operator is told loudly (via the raised error) that a record was
+        dropped — not silently swallowed."""
+        bad = dict(self.sample[2])
+        bad['id'] = 'also-not-a-number'
+        good = self.sample[3]
+        client = fake_client([[good, bad]])
+
+        with self.assertRaisesMessage(ValueError, 'malformed notification'):
+            poll(client=client, limit=100)
+
+        self.assertTrue(EthosMessage.objects.filter(queue_id=int(good['id'])).exists())
 
     def test_transaction_rolls_back_first_row_when_cursor_save_fails(self):
         """A failure that happens genuinely mid-batch — after at least one row

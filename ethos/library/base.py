@@ -88,9 +88,16 @@ class EthosBase:
         if resp.ok:
             try:
                 return resp.json(), log
-            except ValueError:
+            except ValueError as e:
+                body_prefix = (resp.text or '')[:200]
                 logger.error('Unable to parse change-notification batch')
-                return [], log
+                logger.exception(e)
+                raise ValueError(
+                    f'Ethos /consume returned 200 with an unparseable body '
+                    f'(status={resp.status_code}, body_prefix={body_prefix!r}); '
+                    f'the queue pointer has already advanced for this batch, so '
+                    f'this cannot be silently treated as an empty queue.'
+                ) from e
 
         logger.error('Unable to read change-notifications: %s', resp.status_code)
         return [], log
@@ -101,6 +108,12 @@ class EthosBase:
             'HEAD', f'{self.URL}/consume', 'change_notifications_peek',
             headers={'Accept': self.CONSUME_ACCEPT}, **kwargs
         )
+        if not resp.ok:
+            logger.error('Unable to read change-notification queue depth: %s', resp.status_code)
+            raise ValueError(
+                f'Ethos HEAD /consume returned {resp.status_code}; refusing to '
+                f'report a queue depth that may be wrong (e.g. 0) for a failed request.'
+            )
         try:
             return int(resp.headers.get('x-remaining', 0) or 0)
         except (TypeError, ValueError):

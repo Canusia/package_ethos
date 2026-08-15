@@ -1,4 +1,9 @@
-{% if plan is None %}
+{% if error %}
+  <div class="alert alert-danger mb-0">
+    <strong>plan() raised an error:</strong>
+    <pre class="mb-0 mt-2" style="white-space: pre-wrap;">{{ error }}</pre>
+  </div>
+{% elif plan is None %}
   <div class="alert alert-secondary mb-0">
     No handler is configured for <code>{{ message.resource_name }}</code>.
   </div>
