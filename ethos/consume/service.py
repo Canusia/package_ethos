@@ -14,6 +14,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from ..models import EthosMessage
+from .base import Plan
 from .registry import get_handler
 
 logger = logging.getLogger(__name__)
@@ -76,10 +77,16 @@ def consume_message(message, dry_run=False, force=False):
                 detail=str(exc), error=traceback.format_exc(), plan=plan)
         return plan
 
+    # Result wins over Plan when non-empty, otherwise the Plan's value stands.
+    # Known limitation: because Result's target fields default to '', a
+    # handler cannot use them to deliberately blank a target the Plan set.
+    resolved = Plan(
+        action=plan.action, summary=plan.summary, changes=plan.changes,
+        target_type=result.target_type or plan.target_type,
+        target_pk=result.target_pk or plan.target_pk,
+        target_label=result.target_label or plan.target_label,
+        blocked=plan.blocked, reason=plan.reason,
+    )
     _record(message, EthosMessage.CONSUMED, action=result.action,
-            detail=result.detail, plan=plan)
-    message.target_type = result.target_type or plan.target_type
-    message.target_pk = result.target_pk or plan.target_pk
-    message.target_label = result.target_label or plan.target_label
-    message.save(update_fields=['target_type', 'target_pk', 'target_label'])
+            detail=result.detail, plan=resolved)
     return plan

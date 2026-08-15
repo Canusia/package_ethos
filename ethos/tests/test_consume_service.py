@@ -45,6 +45,16 @@ class ExplodingHandler(RecordingHandler):
         raise RuntimeError('handler blew up')
 
 
+class PartiallyApplyingExplodingHandler(RecordingHandler):
+    """Writes a real row, then blows up -- proves apply() rolls back."""
+
+    def apply(self, message, plan):
+        EthosMessage.objects.create(
+            queue_id=999, resource_name='sentinel', resource_id='sentinel-1',
+            operation='created', payload={})
+        raise RuntimeError('handler blew up')
+
+
 def _path(cls):
     return f'{__name__}.{cls.__name__}'
 
@@ -60,6 +70,7 @@ class ConsumeServiceTests(TestCase):
     def setUp(self):
         APPLIED.clear()
 
+    @override_settings(ETHOS_CONSUME_HANDLERS={})
     def test_no_handler_marks_skipped(self):
         msg = _message()
         consume_message(msg)
@@ -96,6 +107,9 @@ class ConsumeServiceTests(TestCase):
         self.assertEqual(msg.status, EthosMessage.PENDING)
         self.assertIsNone(msg.consumed_at)
         self.assertEqual(msg.action, '')
+        self.assertEqual(msg.target_type, '')
+        self.assertEqual(msg.target_pk, '')
+        self.assertEqual(msg.target_label, '')
         self.assertEqual(APPLIED, [])
 
     @override_settings(ETHOS_CONSUME_HANDLERS={
@@ -120,6 +134,18 @@ class ConsumeServiceTests(TestCase):
         self.assertEqual(msg.status, EthosMessage.FAILED)
         self.assertIn('handler blew up', msg.error)
         self.assertIsNotNone(msg.consumed_at)
+
+    @override_settings(ETHOS_CONSUME_HANDLERS={
+        'section-registrations': f'{__name__}.PartiallyApplyingExplodingHandler'})
+    def test_apply_failure_rolls_back_partial_writes(self):
+        msg = _message()
+        consume_message(msg)
+        msg.refresh_from_db()
+
+        self.assertEqual(msg.status, EthosMessage.FAILED)
+        self.assertIn('handler blew up', msg.error)
+        self.assertFalse(
+            EthosMessage.objects.filter(queue_id=999, resource_name='sentinel').exists())
 
     @override_settings(ETHOS_CONSUME_HANDLERS={
         'section-registrations': f'{__name__}.RecordingHandler'})
