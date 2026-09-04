@@ -360,6 +360,102 @@ METHOD_REGISTRY = {
             },
         },
     },
+    'aptitude_assessments': {
+        'label': 'Aptitude Assessments (catalog)',
+        'methods': {
+            'get_aptitude_assessments': {
+                'doc': (
+                    'Fetch the aptitude assessment catalog — the test definitions '
+                    '(ACT Composite, SAT Mathematics, local placement tests). '
+                    'Student scores reference these by GUID.'
+                ),
+                'params': list(_PAGINATION_PARAMS),
+            },
+            'get_aptitude_assessment_by_id': {
+                'doc': 'Fetch a single aptitude assessment by its Ethos GUID.',
+                'params': [
+                    {'name': 'assessment_id', 'type': 'str', 'required': True, 'placeholder': 'Ethos GUID'},
+                ],
+            },
+        },
+    },
+    'student_aptitude_assessments': {
+        'label': 'Student Aptitude Assessments (scores)',
+        'methods': {
+            'get_student_aptitude_assessments': {
+                'doc': (
+                    'Fetch student test scores. Leave both blank to retrieve all '
+                    'scores (may be large). student_id is the Ethos person GUID '
+                    '(Student.sis_id).'
+                ),
+                'params': [
+                    {'name': 'student_id', 'type': 'str', 'required': False, 'placeholder': 'person GUID'},
+                    {'name': 'assessment_id', 'type': 'str', 'required': False, 'placeholder': 'assessment GUID'},
+                ] + _PAGINATION_PARAMS,
+            },
+            'get_student_aptitude_assessment': {
+                'doc': 'Fetch a single score record by its Ethos GUID.',
+                'params': [
+                    {'name': 'record_id', 'type': 'str', 'required': True, 'placeholder': 'Ethos GUID'},
+                ],
+            },
+            'get_student_scores_resolved': {
+                'doc': (
+                    "Fetch a student's scores with each assessment GUID resolved to "
+                    'its code and title, and the score flattened out of its '
+                    'polymorphic wrapper. This is the readable view.'
+                ),
+                'params': [
+                    {'name': 'student_id', 'type': 'str', 'required': True, 'placeholder': 'person GUID'},
+                ],
+            },
+            'create_student_aptitude_assessment': {
+                'doc': (
+                    'WRITE — create a score record. Requires UPDATE.STUDENT.TEST.SCORES '
+                    "in Colleague. score_value must fall within the assessment's min "
+                    'and max score. percentiles is JSON: '
+                    '[{"value": 88, "type": {"id": "<percentile-type-guid>"}}]. '
+                    'special_circumstances is a JSON array of GUID strings. '
+                    'form is JSON: {"number": "3", "name": "Form C"}.'
+                ),
+                'params': [
+                    {'name': 'student_id', 'type': 'str', 'required': True, 'placeholder': 'person GUID'},
+                    {'name': 'assessment_id', 'type': 'str', 'required': True, 'placeholder': 'assessment GUID'},
+                    {'name': 'assessed_on', 'type': 'str', 'required': True, 'placeholder': 'YYYY-MM-DD'},
+                    {'name': 'score_value', 'type': 'float', 'required': True, 'placeholder': 'e.g. 27'},
+                    {'name': 'percentiles', 'type': 'json', 'required': False, 'placeholder': '[{"value": 88, "type": {"id": "GUID"}}]'},
+                    {'name': 'form', 'type': 'json', 'required': False, 'placeholder': '{"number": "3", "name": "Form C"}'},
+                    {'name': 'special_circumstances', 'type': 'json', 'required': False, 'placeholder': '["GUID", "GUID"]'},
+                    {'name': 'source_id', 'type': 'str', 'required': False, 'placeholder': 'sources GUID'},
+                    {'name': 'reported', 'type': 'str', 'required': False, 'placeholder': 'official / unofficial'},
+                    {'name': 'preference', 'type': 'str', 'required': False, 'placeholder': 'primary'},
+                    {'name': 'override_title', 'type': 'str', 'required': False, 'placeholder': 'alternate title'},
+                    {'name': 'comment', 'type': 'str', 'required': False, 'placeholder': 'free text'},
+                ],
+            },
+            'update_student_aptitude_assessment': {
+                'doc': (
+                    'WRITE — replace a score record (PUT). Requires '
+                    'UPDATE.STUDENT.TEST.SCORES. payload is the full JSON record; '
+                    'fetch it with get_student_aptitude_assessment first, edit, and '
+                    'send it back. The root id is forced to match record_id.'
+                ),
+                'params': [
+                    {'name': 'record_id', 'type': 'str', 'required': True, 'placeholder': 'Ethos GUID'},
+                    {'name': 'payload', 'type': 'json', 'required': True, 'placeholder': '{"student": {...}, "score": {...}}'},
+                ],
+            },
+            'delete_student_aptitude_assessment': {
+                'doc': (
+                    'WRITE — delete a score record. Requires DELETE.STUDENT.TEST.SCORES. '
+                    'Fails if the record has related equivalencies or subtest components.'
+                ),
+                'params': [
+                    {'name': 'record_id', 'type': 'str', 'required': True, 'placeholder': 'Ethos GUID'},
+                ],
+            },
+        },
+    },
 }
 
 # Flat allowlist of permitted method names
@@ -371,6 +467,16 @@ _ALLOWED_METHODS = {
 
 # Int params that need type coercion
 _INT_PARAMS = {'depth', 'offset', 'limit'}
+
+# Params carrying JSON (arrays/objects) that must be decoded before the call.
+# Derived from the registry so adding a 'json' param never needs a second edit.
+_JSON_PARAMS = {
+    param['name']
+    for group in METHOD_REGISTRY.values()
+    for method in group['methods'].values()
+    for param in method['params']
+    if param.get('type') == 'json'
+}
 
 
 @require_GET
@@ -406,6 +512,13 @@ def run_method(request):
     limit = None
     for k, v in raw_params.items():
         if v == '' or v is None:
+            continue
+        if k in _JSON_PARAMS and isinstance(v, str):
+            try:
+                kwargs[k] = json.loads(v)
+            except (ValueError, TypeError) as exc:
+                return JsonResponse(
+                    {'error': f'Parameter "{k}" is not valid JSON: {exc}'}, status=400)
             continue
         if k in _INT_PARAMS:
             try:

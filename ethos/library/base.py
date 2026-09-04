@@ -138,6 +138,8 @@ class EthosBase:
             resp = requests.put(url, headers=req_headers, data=data, json=json_data)
         elif method == 'HEAD':
             resp = requests.head(url, headers=req_headers)
+        elif method == 'DELETE':
+            resp = requests.delete(url, headers=req_headers)
         else:
             raise ValueError(f'Unsupported HTTP method: {method}')
 

@@ -21,6 +21,8 @@ from .student_account import StudentAccountMixin
 from .grades import GradesMixin
 from .holds import HoldsMixin
 from .reference import ReferenceMixin
+from .aptitude_assessments import AptitudeAssessmentsMixin
+from .student_aptitude_assessments import StudentAptitudeAssessmentsMixin
 
 
 class Recruiter:
@@ -29,6 +31,8 @@ class Recruiter:
 
 class Ethos(
     SectionDetailMixin,
+    StudentAptitudeAssessmentsMixin,
+    AptitudeAssessmentsMixin,
     StudentRecordsMixin,
     StudentAccountMixin,
     GradesMixin,
@@ -55,6 +59,8 @@ class Ethos(
     - GradesMixin: grade reads, grade definitions/modes/schemes, final grade submission
     - HoldsMixin: list/get/release person holds, hold type reference data
     - ReferenceMixin: academic levels, instructional methods, grade schemes, catalogs, institutions
+    - AptitudeAssessmentsMixin: the assessment (test) catalog, plus a cached GUID->record map
+    - StudentAptitudeAssessmentsMixin: student test scores, full CRUD, plus a name-resolved read
 
     Existing:
     - PersonMixin: person CRUD, matching, credentials

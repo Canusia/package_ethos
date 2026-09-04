@@ -90,13 +90,21 @@ function loadMethod(name) {
     meta.params.forEach(function(p) {
       var label = p.name;
       if (!p.required) label += ' <span class="text-muted font-weight-normal">(optional)</span>';
-      var html = '<div class="form-group row mb-2">' +
-        '<label class="col-sm-3 col-form-label col-form-label-sm">' + label + '</label>' +
-        '<div class="col-sm-9">' +
-        '<input type="text" class="form-control form-control-sm param-input" ' +
-        'name="' + p.name + '" placeholder="' + (p.placeholder || '') + '">' +
-        '</div></div>';
-      $fields.append(html);
+
+      // json params get a textarea; their placeholders contain quotes, so the
+      // input is built with jQuery rather than concatenated into an attribute.
+      var $input = p.type === 'json'
+        ? $('<textarea rows="3">')
+        : $('<input type="text">');
+      $input
+        .addClass('form-control form-control-sm param-input')
+        .attr('name', p.name)
+        .attr('placeholder', p.placeholder || '');
+
+      var $row = $('<div class="form-group row mb-2">')
+        .append($('<label class="col-sm-3 col-form-label col-form-label-sm">').html(label))
+        .append($('<div class="col-sm-9">').append($input));
+      $fields.append($row);
     });
   } else {
     $fields.append('<p class="text-muted small">No parameters required.</p>');
