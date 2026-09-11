@@ -1,4 +1,5 @@
 import importlib.util
+from datetime import date
 
 from django.test import SimpleTestCase
 
@@ -57,3 +58,27 @@ class BuildPersonsCriteriaTests(SimpleTestCase):
                 'roles': [{'role': 'student'}],
                 'emails': [{'address': 'a@b.com'}],
             })
+
+
+class DateOfBirthCriteriaTests(SimpleTestCase):
+    def setUp(self):
+        self.b = Ethos().build_persons_criteria
+
+    def test_iso_string(self):
+        self.assertEqual(self.b(date_of_birth='2011-05-02'),
+                         {'dateOfBirth': '2011-05-02'})
+
+    def test_date_object(self):
+        self.assertEqual(self.b(date_of_birth=date(2011, 5, 2)),
+                         {'dateOfBirth': '2011-05-02'})
+
+    def test_name_and_dob(self):
+        self.assertEqual(
+            self.b(first_name='Kelly', last_name='Rich', date_of_birth='2011-05-02'),
+            {
+                'names': [{'firstName': 'Kelly', 'lastName': 'Rich'}],
+                'dateOfBirth': '2011-05-02',
+            })
+
+    def test_omitted_when_none(self):
+        self.assertNotIn('dateOfBirth', self.b(last_name='Rich'))

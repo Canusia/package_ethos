@@ -791,6 +791,51 @@ person = client.get_person("f47ac10b-58cc-4372-a567-0e02b2c3d479")
 
 ---
 
+#### `build_persons_criteria(**filters)`
+
+Builds the `criteria` dict for `GET /api/persons` from the supported filters. Only
+the non-`None` ones are included; an empty call returns `{}`.
+
+| Keyword | Emitted as |
+|---------|-----------|
+| `title`, `first_name`, `middle_name`, `last_name_prefix`, `last_name`, `pedigree` | `names[0].*` |
+| `role` | `roles[0].role` |
+| `credential_type`, `credential_value` | `credentials[0].type` / `.value` |
+| `alt_credential_type_id`, `alt_credential_value` | `alternativeCredentials[0].type.id` / `.value` |
+| `email_address` | `emails[0].address` |
+| `date_of_birth` | top-level `dateOfBirth` (a `date`, or an ISO `YYYY-MM-DD` string) |
+
+```python
+client.build_persons_criteria(first_name="Kelly", last_name="Rich",
+                              date_of_birth="2011-05-02")
+# {"names": [{"firstName": "Kelly", "lastName": "Rich"}],
+#  "dateOfBirth": "2011-05-02"}
+```
+
+#### `search_persons(criteria, message_type='search_persons', description='', **kwargs)`
+
+`GET /api/persons` with `criteria`; returns **all** matching raw person records as a
+list. Returns `[]` on a failed request, no match, or a non-list payload, so callers can
+iterate without a null check.
+
+Use this rather than the `lookup_person_by_*` helpers for identity matching, where
+telling one match from several is the point — those helpers return only the first
+record, so an ambiguous result is indistinguishable from a confident one.
+
+```python
+matches = client.search_persons(
+    client.build_persons_criteria(first_name="Kelly", last_name="Rich",
+                                  date_of_birth="2011-05-02"))
+if len(matches) != 1:
+    ...  # ambiguous or not found — refer for human review, do not write
+```
+
+> **Note:** confirm against your own Ethos instance that `dateOfBirth` is actually
+> applied as a persons filter. A filter that is accepted but silently ignored returns an
+> unfiltered result set, which looks like a match.
+
+---
+
 ### Sites & Programs Client
 
 #### `get_sites(**kwargs)`

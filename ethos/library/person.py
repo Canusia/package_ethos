@@ -4,6 +4,7 @@ PersonMixin — person record CRUD, matching, and credentials.
 
 import logging, requests, json
 
+from datetime import date
 from urllib.parse import urlencode
 
 from ..models import EthosLog
@@ -692,7 +693,7 @@ class PersonMixin(EthosBase):
                                last_name_prefix=None, last_name=None, pedigree=None,
                                role=None, credential_type=None, credential_value=None,
                                alt_credential_type_id=None, alt_credential_value=None,
-                               email_address=None):
+                               email_address=None, date_of_birth=None):
         """Build a GET /api/persons `criteria` dict from the supported filters.
 
         Supported Ethos persons filters (only the non-None ones are included):
@@ -701,6 +702,7 @@ class PersonMixin(EthosBase):
           credentials.type / credentials.value
           alternativeCredentials.type.id / alternativeCredentials.value
           emails.address
+          dateOfBirth (a `date`, or an ISO 'YYYY-MM-DD' string)
         """
         criteria = {}
 
@@ -742,11 +744,23 @@ class PersonMixin(EthosBase):
         if email_address is not None:
             criteria['emails'] = [{'address': email_address}]
 
+        if date_of_birth is not None:
+            criteria['dateOfBirth'] = (
+                date_of_birth.strftime('%Y-%m-%d')
+                if isinstance(date_of_birth, date) else str(date_of_birth))
+
         return criteria
 
-    def _lookup_person_record(self, criteria, message_type, description='', **kwargs):
-        """GET /api/persons with `criteria`; return the first matching raw person
-        record dict, or None. Shared core of the lookup_person_by_* helpers."""
+    def search_persons(self, criteria, message_type='search_persons',
+                       description='', **kwargs):
+        """GET /api/persons with `criteria`; return ALL matching raw person
+        records as a list.
+
+        Returns [] on a failed request, no match, or a non-list payload, so
+        callers can iterate without a null check. Use this — not the
+        lookup_person_by_* helpers — for identity matching, where telling one
+        match from several is the whole point.
+        """
         url = f'{self.URL}/api/persons?' + urlencode({'criteria': json.dumps(criteria)})
         accept = self.get_preferred_accept_header('persons') or 'application/json'
 
@@ -758,13 +772,20 @@ class PersonMixin(EthosBase):
         )
 
         if not resp.ok:
-            return None
+            return []
 
         data = resp.json()
         if not data or not isinstance(data, list):
-            return None
+            return []
 
-        return data[0]
+        return data
+
+    def _lookup_person_record(self, criteria, message_type, description='', **kwargs):
+        """GET /api/persons with `criteria`; return the first matching raw person
+        record dict, or None. Shared core of the lookup_person_by_* helpers."""
+        records = self.search_persons(
+            criteria, message_type, description=description, **kwargs)
+        return records[0] if records else None
 
     def lookup_person_by_alternative_credential(self, credential_value, type_id, **kwargs):
         """
