@@ -22,6 +22,18 @@ UNVERIFIED_GRADES_SUBMISSION = (
 NIL_GUID = '00000000-0000-0000-0000-000000000000'
 
 
+class UnverifiedGradesLookupError(Exception):
+    """A non-OK response to the Banner unverified-grades lookup.
+
+    Distinguishes "the lookup itself failed" from "Banner has no record" ([]):
+    the latter means POST (create), the former must not POST at all.
+    """
+
+    def __init__(self, status_code):
+        self.status_code = status_code
+        super().__init__(f'get_unverified_grades failed: HTTP {status_code}')
+
+
 class GradesMixin(EthosBase):
     """Grade reads and write operations for the CE workflow."""
 
@@ -120,6 +132,10 @@ class GradesMixin(EthosBase):
         """Return student-unverified-grades records for one section registration.
 
         An empty list means Banner has none, so a submission must POST (create).
+        Raises `UnverifiedGradesLookupError` when the lookup request itself
+        fails (non-OK response): that must not be mistaken for "no existing
+        record" by a caller deciding POST vs PUT, since it would silently
+        POST a duplicate instead of updating the record that may well exist.
         """
         criteria = {'sectionRegistration': {'id': section_registration_id}}
         url = f'{self.URL}/api/student-unverified-grades?' + urlencode({'criteria': json.dumps(criteria)})
@@ -129,7 +145,7 @@ class GradesMixin(EthosBase):
         if resp.ok:
             return resp.json()
         logger.error('get_unverified_grades failed: %s %s', resp.status_code, resp.text)
-        return []
+        raise UnverifiedGradesLookupError(resp.status_code)
 
     def submit_unverified_grade(self, section_registration_id, grade_id, grade_type_id,
                                 submitted_by_id=None, record_id=None, **kwargs):

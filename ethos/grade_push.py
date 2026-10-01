@@ -15,14 +15,28 @@ from types import SimpleNamespace
 from django.urls import NoReverseMatch, reverse
 
 from .library.ethos import Ethos
+from .library.grades import UnverifiedGradesLookupError
 
 AUTH_STATUS_CODES = (401, 403)
+
+_client = None
+
+
+def _get_client():
+    """One Ethos client (and its auth-token cache) reused across calls in
+    this process/batch, so a run of many registrations authenticates once
+    instead of once per row. Tests reset this via `grade_push._client = None`.
+    """
+    global _client
+    if _client is None:
+        _client = Ethos()
+    return _client
 
 
 def config_errors(guids=None):
     """Human-readable problems with the grade-push configuration ([] = OK)."""
     if guids is None:
-        guids = Ethos()._load_sis_guids()
+        guids = _get_client()._load_sis_guids()
     errors = []
     if not (guids.get('final_grade_type') or {}).get('id'):
         errors.append('sis_guids.final_grade_type.id is not set.')
@@ -58,7 +72,7 @@ def _submission_error(log):
 
 def push_final_grade(registration, grade, existing_record_id=None):
     """Create or update the Banner unverified FINAL grade for `registration`."""
-    ethos = Ethos()
+    ethos = _get_client()
     guids = ethos._load_sis_guids()
 
     errors = config_errors(guids)
@@ -81,7 +95,15 @@ def push_final_grade(registration, grade, existing_record_id=None):
 
     record_id = existing_record_id
     if not record_id:
-        existing = ethos.get_unverified_grades(section_registration_id)
+        try:
+            existing = ethos.get_unverified_grades(section_registration_id)
+        except UnverifiedGradesLookupError as exc:
+            # A failed lookup is not "no existing record": treating it as
+            # such would POST a duplicate instead of updating the record
+            # that may well already exist in Banner.
+            return _result(False, error=(
+                'Could not check for an existing Banner record '
+                f'(HTTP {exc.status_code}).'))
         if existing:
             record_id = existing[0].get('id')
 

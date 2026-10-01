@@ -6,9 +6,11 @@ from django.test import TestCase
 
 try:
     from ethos.ethos.library.ethos import Ethos
+    from ethos.ethos.library.grades import UnverifiedGradesLookupError
     from ethos.ethos.models import EthosLog
 except ImportError:
     from ethos.library.ethos import Ethos
+    from ethos.library.grades import UnverifiedGradesLookupError
     from ethos.models import EthosLog
 
 REG = 'b1132b12-cda9-4e2a-bc48-a06870e41802'
@@ -105,7 +107,12 @@ class GetUnverifiedGradesTests(TestCase):
         self.assertIn(REG, mock_get.call_args.args[0])
 
     @patch('ethos.ethos.library.base.requests.get')
-    def test_error_returns_empty_list(self, mock_get):
+    def test_error_raises_lookup_error_instead_of_empty_list(self, mock_get):
+        """A failed lookup must not be mistaken for "no existing record" --
+        that would make a caller POST a duplicate instead of updating the
+        record that may well already exist in Banner."""
         mock_get.return_value = _resp(ok=False, status=500, body={})
 
-        self.assertEqual(self.ethos.get_unverified_grades(REG), [])
+        with self.assertRaises(UnverifiedGradesLookupError) as ctx:
+            self.ethos.get_unverified_grades(REG)
+        self.assertEqual(ctx.exception.status_code, 500)
