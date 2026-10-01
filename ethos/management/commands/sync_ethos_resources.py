@@ -21,7 +21,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR('No data returned — check API credentials or connectivity.'))
             return
 
-        apps_synced, resources_synced = sync_resources(apps_data)
+        apps_synced, resources_synced = sync_resources(apps_data, campus=ethos.campus)
         self.stdout.write(self.style.SUCCESS(
             f'Synced {apps_synced} application(s) and {resources_synced} resource(s).'
         ))

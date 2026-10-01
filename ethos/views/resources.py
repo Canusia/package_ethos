@@ -14,6 +14,7 @@ from rest_framework import viewsets
 from ..models import EthosApplication, EthosRepresentation, EthosResource
 from ..serializers import EthosResourceSerializer
 from ..library.ethos import Ethos
+from ..campus import for_campus
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +23,11 @@ logger = logging.getLogger(__name__)
 # Shared sync helper (used by view and management command)
 # ---------------------------------------------------------------------------
 
-def sync_resources(apps_data):
-    """Write API response to DB. Returns (apps_synced, resources_synced)."""
+def sync_resources(apps_data, campus=None):
+    """Write API response to DB. Returns (apps_synced, resources_synced).
+
+    Upserts on (campus, ethos_id); campus=None addresses the campus-less rows.
+    """
     apps_synced = 0
     resources_synced = 0
 
@@ -33,6 +37,7 @@ def sync_resources(apps_data):
             continue
 
         application, _ = EthosApplication.objects.update_or_create(
+            campus=campus,
             ethos_id=ethos_id,
             defaults={
                 'name': app.get('name', ''),
@@ -83,7 +88,10 @@ class EthosResourceViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = EthosResourceSerializer
 
     def get_queryset(self):
-        qs = EthosResource.objects.select_related('application', 'preferred_representation').prefetch_related('representations')
+        qs = for_campus(
+            EthosResource.objects.select_related('application', 'preferred_representation').prefetch_related('representations'),
+            path='application__campus',
+        )
         app = self.request.GET.get('application')
         if app:
             qs = qs.filter(application__id=app)
@@ -100,7 +108,7 @@ def resources_list(request):
     from cis.menu import cis_menu, draw_menu
     menu = draw_menu(cis_menu, 'ethos', 'ethos_resources')
     
-    latest_sync = EthosApplication.objects.order_by('-synced_at').values_list('synced_at', flat=True).first()
+    latest_sync = for_campus(EthosApplication.objects.all()).order_by('-synced_at').values_list('synced_at', flat=True).first()
     return render(request, 'ethos/resources/index.html', {
         'menu': menu,
         'api_url': '/ce/ethos/api/ethos-resource/?format=datatables',
@@ -117,7 +125,7 @@ def resources_sync(request):
         if not apps_data:
             messages.error(request, 'No data returned from Ethos — check API credentials.')
         else:
-            apps_synced, resources_synced = sync_resources(apps_data)
+            apps_synced, resources_synced = sync_resources(apps_data, campus=ethos.campus)
             messages.success(
                 request,
                 f'Synced {apps_synced} application(s) and {resources_synced} resource(s) from Ethos.',
@@ -132,7 +140,7 @@ def resources_sync(request):
 @require_POST
 def resource_set_preferred(request, pk):
     """Save the preferred representation for a resource."""
-    resource = get_object_or_404(EthosResource, pk=pk)
+    resource = get_object_or_404(for_campus(EthosResource.objects.all(), path='application__campus'), pk=pk)
     rep_id = request.POST.get('representation_id')
     if rep_id:
         rep = get_object_or_404(EthosRepresentation, pk=rep_id, resource=resource)
@@ -151,7 +159,10 @@ def resource_set_preferred(request, pk):
 def resource_detail(request, pk):
     """Detail view for a single Ethos resource showing all representations."""
     resource = get_object_or_404(
-        EthosResource.objects.select_related('application').prefetch_related('representations'),
+        for_campus(
+            EthosResource.objects.select_related('application').prefetch_related('representations'),
+            path='application__campus',
+        ),
         pk=pk,
     )
     template = (

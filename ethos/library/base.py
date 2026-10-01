@@ -191,10 +191,12 @@ class EthosBase:
         """Return the preferred x_media_type for a resource, or None if not set."""
         from ..models import EthosResource
         try:
-            resource = (EthosResource.objects
-                        .select_related('preferred_representation')
-                        .filter(name=resource_name, preferred_representation__isnull=False)
-                        .first())
+            qs = (EthosResource.objects
+                  .select_related('preferred_representation')
+                  .filter(name=resource_name, preferred_representation__isnull=False))
+            if self.campus is not None:
+                qs = qs.filter(application__campus=self.campus)
+            resource = qs.first()
             if resource:
                 return resource.preferred_representation.x_media_type
         except Exception:
