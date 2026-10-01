@@ -1,7 +1,7 @@
 import importlib.util
 from unittest.mock import MagicMock, patch
 
-from django.test import SimpleTestCase
+from django.test import TestCase, override_settings
 
 if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.library.ethos import Ethos
@@ -16,7 +16,8 @@ SAMPLE = [{
 }]
 
 
-class ColleagueLookupTests(SimpleTestCase):
+@override_settings(MULTI_CAMPUS=False)
+class ColleagueLookupTests(TestCase):
     @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
     @patch.object(Ethos, '_api_request')
     def test_returns_first_record(self, mock_api, _accept):

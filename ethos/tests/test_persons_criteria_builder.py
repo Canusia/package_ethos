@@ -1,7 +1,7 @@
 import importlib.util
 from datetime import date
 
-from django.test import SimpleTestCase
+from django.test import TestCase, override_settings
 
 if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.library.ethos import Ethos
@@ -9,7 +9,8 @@ else:
     from ethos.library.ethos import Ethos
 
 
-class BuildPersonsCriteriaTests(SimpleTestCase):
+@override_settings(MULTI_CAMPUS=False)
+class BuildPersonsCriteriaTests(TestCase):
     def setUp(self):
         self.b = Ethos().build_persons_criteria
 
@@ -60,7 +61,8 @@ class BuildPersonsCriteriaTests(SimpleTestCase):
             })
 
 
-class DateOfBirthCriteriaTests(SimpleTestCase):
+@override_settings(MULTI_CAMPUS=False)
+class DateOfBirthCriteriaTests(TestCase):
     def setUp(self):
         self.b = Ethos().build_persons_criteria
 

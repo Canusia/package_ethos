@@ -22,10 +22,19 @@ class EthosBase:
     from django.conf import settings
 
     URL = 'https://integrate.elluciancloud.com'
-    AUTH_CODE = getattr(settings, 'COLLEAGUE_AUTH_CODE')
+    AUTH_CODE = getattr(settings, 'COLLEAGUE_AUTH_CODE', '')
 
-    def __init__(self):
-        """Initialize Ethos client with empty token cache."""
+    def __init__(self, campus=None):
+        """Client for ``campus`` -- explicit, else the ambient campus (request host,
+        CampusCommand, campus_context). Multi-campus with no campus raises
+        NoCampusContext; a campus without credentials raises EthosNotConfigured."""
+        from cis.campus_context import current_campus_or_none, is_multi_campus, NoCampusContext
+        from ..credentials import credentials_for
+        campus = campus if campus is not None else current_campus_or_none()
+        if campus is None and is_multi_campus():
+            raise NoCampusContext('Ethos() needs a campus on a multi-campus deployment.')
+        self.campus = campus
+        self.AUTH_CODE, self.URL = credentials_for(campus)
         self._cached_token = None
         self._token_expires_at = None
 

@@ -2,7 +2,7 @@
 import importlib.util
 from unittest.mock import MagicMock, patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.library.ethos import Ethos
@@ -24,6 +24,7 @@ def _resp(status=200, payload=None, headers=None, text='[]'):
     return resp
 
 
+@override_settings(MULTI_CAMPUS=False)
 class GetMessagesTests(TestCase):
     def setUp(self):
         self.ethos = Ethos()
@@ -84,6 +85,7 @@ class GetMessagesTests(TestCase):
                 self.ethos.get_messages(limit=10)
 
 
+@override_settings(MULTI_CAMPUS=False)
 class AvailableMessageCountTests(TestCase):
     def setUp(self):
         self.ethos = Ethos()
@@ -111,6 +113,7 @@ class AvailableMessageCountTests(TestCase):
                 self.ethos.available_message_count()
 
 
+@override_settings(MULTI_CAMPUS=False)
 class ApiRequestMethodTests(TestCase):
     def test_unsupported_method_raises_clearly(self):
         ethos = Ethos()

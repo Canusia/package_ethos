@@ -1,7 +1,7 @@
 import importlib.util
 from unittest.mock import MagicMock, patch
 
-from django.test import SimpleTestCase
+from django.test import TestCase, override_settings
 
 if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.library.ethos import Ethos
@@ -34,7 +34,8 @@ def _fail():
     return (resp, None)
 
 
-class GetSectionRegistrationsTests(SimpleTestCase):
+@override_settings(MULTI_CAMPUS=False)
+class GetSectionRegistrationsTests(TestCase):
     @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
     @patch.object(Ethos, '_api_request')
     def test_returns_list_on_ok(self, mock_api, _accept):
@@ -57,7 +58,8 @@ class GetSectionRegistrationsTests(SimpleTestCase):
         self.assertEqual(Ethos().get_section_registrations(SECTION_ID), [])
 
 
-class GetRegistrationsForRegistrantTests(SimpleTestCase):
+@override_settings(MULTI_CAMPUS=False)
+class GetRegistrationsForRegistrantTests(TestCase):
     @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
     @patch.object(Ethos, '_api_request')
     def test_returns_list_on_ok(self, mock_api, _accept):

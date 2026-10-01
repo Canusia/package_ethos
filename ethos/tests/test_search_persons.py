@@ -1,7 +1,7 @@
 import importlib.util
 from unittest.mock import MagicMock, patch
 
-from django.test import SimpleTestCase
+from django.test import TestCase, override_settings
 
 if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.library.ethos import Ethos
@@ -25,7 +25,8 @@ def _not_ok():
     return (resp, None)
 
 
-class SearchPersonsTests(SimpleTestCase):
+@override_settings(MULTI_CAMPUS=False)
+class SearchPersonsTests(TestCase):
     @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
     @patch.object(Ethos, '_api_request')
     def test_returns_every_matching_record(self, mock_api, _accept):
@@ -69,7 +70,8 @@ class SearchPersonsTests(SimpleTestCase):
         self.assertEqual(mock_api.call_args.args[2], 'search_persons')
 
 
-class LookupPersonRecordStillReturnsFirstTests(SimpleTestCase):
+@override_settings(MULTI_CAMPUS=False)
+class LookupPersonRecordStillReturnsFirstTests(TestCase):
     @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
     @patch.object(Ethos, '_api_request')
     def test_returns_first_of_several(self, mock_api, _accept):

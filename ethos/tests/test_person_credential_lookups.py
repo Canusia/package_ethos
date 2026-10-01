@@ -1,7 +1,7 @@
 import importlib.util
 from unittest.mock import MagicMock, patch
 
-from django.test import SimpleTestCase
+from django.test import TestCase, override_settings
 
 if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.library.ethos import Ethos
@@ -30,7 +30,8 @@ def _ok(record):
     return (resp, None)
 
 
-class AltCredentialLookupTests(SimpleTestCase):
+@override_settings(MULTI_CAMPUS=False)
+class AltCredentialLookupTests(TestCase):
     @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
     @patch.object(Ethos, '_api_request')
     def test_returns_full_parsed_dict(self, mock_api, _accept):
@@ -72,7 +73,8 @@ class AltCredentialLookupTests(SimpleTestCase):
         self.assertIsNone(Ethos().lookup_person_by_alternative_credential('V', 'T'))
 
 
-class BannerIdLookupTests(SimpleTestCase):
+@override_settings(MULTI_CAMPUS=False)
+class BannerIdLookupTests(TestCase):
     @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
     @patch.object(Ethos, '_api_request')
     def test_returns_full_parsed_dict(self, mock_api, _accept):
@@ -103,7 +105,8 @@ class BannerIdLookupTests(SimpleTestCase):
         self.assertIsNone(Ethos().lookup_person_by_banner_id('B123'))
 
 
-class LookupPersonRecordCoreTests(SimpleTestCase):
+@override_settings(MULTI_CAMPUS=False)
+class LookupPersonRecordCoreTests(TestCase):
     @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
     @patch.object(Ethos, '_api_request')
     def test_returns_first_record(self, mock_api, _accept):
