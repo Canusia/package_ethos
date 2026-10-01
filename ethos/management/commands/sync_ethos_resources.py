@@ -1,14 +1,13 @@
 import logging
 
-from django.core.management.base import BaseCommand
-
+from ...command_base import EthosCommand
 from ...library.ethos import Ethos
 from ...views.resources import sync_resources
 
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
+class Command(EthosCommand):
     """Sync available Ethos resources/applications to the local database."""
     help = 'Fetch GET /admin/available-resources from Ethos and upsert into EthosApplication/Resource/Representation tables.'
 

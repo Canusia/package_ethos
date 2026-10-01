@@ -16,14 +16,16 @@ def import_sections_for_term(term_id: str) -> dict:
     term = Term.objects.get(pk=term_id)
     period_id = str(term.external_sis_id) if term.external_sis_id else None
 
+    campus = term.academic_year.campus
+
     if not period_id:
-        ethos = Ethos()
+        ethos = Ethos(campus=campus)
         period_id = ethos.get_academic_period_id(term.code)
 
     if not period_id:
         return {'error': 'Could not resolve Ethos period ID for this term'}
 
-    ethos = Ethos()
+    ethos = Ethos(campus=campus)
     raw_sections = ethos.get_sections(period_id=period_id)
     counts = SectionImporter().import_sections(raw_sections, term=term)
     counts['total_fetched'] = len(raw_sections)

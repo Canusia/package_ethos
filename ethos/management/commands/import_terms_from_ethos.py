@@ -1,17 +1,17 @@
 import logging
 
-from django.core.management.base import BaseCommand
-
+from ...command_base import EthosCommand
 from ...library.ethos import Ethos
 
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
+class Command(EthosCommand):
     '''Import academic years and terms from Ethos.'''
     help = 'Look up an academic period by code in Ethos, then create the AcademicYear and its child Terms.'
 
     def add_arguments(self, parser):
+        super().add_arguments(parser)
         parser.add_argument('code', type=str, help='Academic period code to look up (e.g. "2025")')
         parser.add_argument('--create', action='store_true', help='Create/update records in local database')
 

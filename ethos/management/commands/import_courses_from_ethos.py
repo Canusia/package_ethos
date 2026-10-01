@@ -1,17 +1,19 @@
 import logging
 
-from django.core.management.base import BaseCommand
+from cis.campus_context import current_campus_or_none
 
+from ...command_base import EthosCommand
 from ...library.ethos import Ethos
 
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
+class Command(EthosCommand):
     '''Import courses from Ethos into the local Course table.'''
     help = 'Fetch courses from the Ethos API and optionally create/update Course records.'
 
     def add_arguments(self, parser):
+        super().add_arguments(parser)
         parser.add_argument('--create', action='store_true', help='Create/update courses in local database')
 
     def handle(self, *args, **kwargs):
@@ -67,7 +69,7 @@ class Command(BaseCommand):
             course, was_created = Course.objects.get_or_create(
                 cohort=cohort,
                 catalog_number=number,
-                campus=None,
+                campus=current_campus_or_none(),
                 defaults={
                     'name': name,
                     'title': title,

@@ -1,8 +1,7 @@
 import csv
 import logging
 
-from django.core.management.base import BaseCommand
-
+from ...command_base import EthosCommand
 from ...library.ethos import Ethos
 
 logger = logging.getLogger(__name__)
@@ -14,11 +13,12 @@ def _is_uuid(value):
     return len(value) == UUID_LENGTH and value.count('-') == 4
 
 
-class Command(BaseCommand):
+class Command(EthosCommand):
     '''Fetch sections from Ethos for a term and upsert them into the CIS database.'''
     help = 'Fetch sections from the Ethos API for a given term and optionally create/update records.'
 
     def add_arguments(self, parser):
+        super().add_arguments(parser)
         parser.add_argument(
             'term',
             help='Term code (e.g. "202620") or academic period GUID',

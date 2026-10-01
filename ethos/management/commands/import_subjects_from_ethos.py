@@ -1,17 +1,17 @@
 import logging
 
-from django.core.management.base import BaseCommand
-
+from ...command_base import EthosCommand
 from ...library.ethos import Ethos
 
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
+class Command(EthosCommand):
     '''Import subjects from Ethos into the local Cohort table.'''
     help = 'Fetch subjects from the Ethos API and optionally create/update Cohort records.'
 
     def add_arguments(self, parser):
+        super().add_arguments(parser)
         parser.add_argument('--create', action='store_true', help='Create/update subjects in local database')
 
     def handle(self, *args, **kwargs):
