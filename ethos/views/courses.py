@@ -6,6 +6,8 @@ from django.shortcuts import get_object_or_404
 from cis.models.course import Course
 from myce.component_registry.course import course_actions
 
+from ._client import ethos_client_or_error
+
 logger = logging.getLogger(__name__)
 
 
@@ -70,8 +72,14 @@ def lookup_by_title(request):
             'message': 'No course selected.',
         })
 
-    from ..library.ethos import Ethos
-    ethos = Ethos()
+    ethos, not_configured = ethos_client_or_error(request)
+    if not_configured:
+        return JsonResponse({
+            'outcome': 'alert',
+            'status': 'error',
+            'title': 'Error',
+            'message': not_configured,
+        })
 
     lines = []
     for course_id in ids:
@@ -136,8 +144,14 @@ def update_from_ethos(request):
             'message': 'No course selected.',
         })
 
-    from ..library.ethos import Ethos
-    ethos = Ethos()
+    ethos, not_configured = ethos_client_or_error(request)
+    if not_configured:
+        return JsonResponse({
+            'outcome': 'alert',
+            'status': 'error',
+            'title': 'Error',
+            'message': not_configured,
+        })
 
     lines = []
     for course_id in ids:

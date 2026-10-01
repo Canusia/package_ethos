@@ -13,7 +13,7 @@ from rest_framework import viewsets
 
 from ..models import EthosApplication, EthosRepresentation, EthosResource
 from ..serializers import EthosResourceSerializer
-from ..library.ethos import Ethos
+from ._client import ethos_client_or_error
 from ..campus import for_campus
 
 logger = logging.getLogger(__name__)
@@ -119,8 +119,12 @@ def resources_list(request):
 @require_POST
 def resources_sync(request):
     """Trigger a live sync from the Ethos API and redirect back to the list."""
+    ethos, not_configured = ethos_client_or_error(request)
+    if not_configured:
+        messages.error(request, not_configured)
+        return redirect('ethos:ethos_resources')
+
     try:
-        ethos = Ethos()
         apps_data = ethos.get_available_resources()
         if not apps_data:
             messages.error(request, 'No data returned from Ethos — check API credentials.')

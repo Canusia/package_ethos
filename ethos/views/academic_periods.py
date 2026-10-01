@@ -6,6 +6,8 @@ from django.shortcuts import get_object_or_404
 
 from cis.models.term import AcademicYear, Term
 
+from ._client import ethos_client_or_error
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,8 +27,13 @@ def lookup_guid(request):
 
     record = get_object_or_404(AcademicYear, pk=ids[0])
 
-    from ..library.ethos import Ethos
-    ethos = Ethos()
+    ethos, not_configured = ethos_client_or_error(request)
+    if not_configured:
+        return JsonResponse({
+            'status': 'warning',
+            'message': not_configured,
+            'action': 'display',
+        })
 
     periods = ethos.get_academic_periods(code=record.code)
     if not periods:
@@ -58,8 +65,9 @@ def lookup_academic_period(request):
     if not code:
         return JsonResponse({'status': 'error', 'message': 'Code is required.'}, status=400)
 
-    from ..library.ethos import Ethos
-    ethos = Ethos()
+    ethos, not_configured = ethos_client_or_error(request)
+    if not_configured:
+        return JsonResponse({'status': 'error', 'message': not_configured}, status=409)
 
     periods = ethos.get_academic_periods(code=code)
     if not periods:

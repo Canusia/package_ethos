@@ -9,6 +9,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
 
 from ..library.ethos import Ethos
+from ._client import ethos_client_or_error
 
 
 _PAGINATION_PARAMS = [
@@ -534,8 +535,11 @@ def run_method(request):
         else:
             kwargs[k] = v
 
+    ethos, not_configured = ethos_client_or_error(request, factory=Ethos)
+    if not_configured:
+        return JsonResponse({'error': not_configured}, status=409)
+
     try:
-        ethos = Ethos()
         method = getattr(ethos, method_name)
         result = method(**kwargs)
         if isinstance(result, list):

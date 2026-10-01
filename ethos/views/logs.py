@@ -10,6 +10,7 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 
 from rest_framework import viewsets
 
+from ..campus import for_campus
 from ..models import EthosLog
 from ..serializers import EthosLogSerializer
 
@@ -18,7 +19,7 @@ class EthosLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = EthosLogSerializer
 
     def get_queryset(self):
-        qs = EthosLog.objects.all()
+        qs = for_campus(EthosLog.objects.all())
         message_type = self.request.GET.get('message_type')
         if message_type:
             qs = qs.filter(message_type=message_type)
@@ -48,7 +49,7 @@ def _parse_response_body(text):
 
 @xframe_options_exempt
 def log_detail(request, pk):
-    log = get_object_or_404(EthosLog, pk=pk)
+    log = get_object_or_404(for_campus(EthosLog.objects.all()), pk=pk)
     template = (
         'ethos/logs/detail_partial.html'
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest'

@@ -11,6 +11,7 @@ from rest_framework.permissions import BasePermission
 
 from cis.menu import cis_menu, draw_menu
 
+from ..campus import for_campus
 from ..models import EthosMessage
 from ..serializers import EthosMessageSerializer
 from ..consume.service import consume_message
@@ -32,14 +33,14 @@ class HasCERole(BasePermission):
 class EthosMessageViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = EthosMessageSerializer
     permission_classes = [HasCERole]
-    queryset = EthosMessage.objects.all()
+    queryset = EthosMessage.objects.none()  # per-request in get_queryset (campus scoped)
 
     def get_queryset(self):
         # Two optional narrowing filters, driven by query params rather than
         # DataTables' own search: they let the list be linked to directly, e.g.
         # "show me everything that failed" or "just section-registrations",
         # without the operator having to type into the search box.
-        qs = EthosMessage.objects.all()
+        qs = for_campus(EthosMessage.objects.all())
         resource = self.request.GET.get('resource_name')
         if resource:
             qs = qs.filter(resource_name=resource)
@@ -59,7 +60,7 @@ def messages_list(request):
 
 @xframe_options_exempt
 def message_detail(request, pk):
-    message = get_object_or_404(EthosMessage, pk=pk)
+    message = get_object_or_404(for_campus(EthosMessage.objects.all()), pk=pk)
     template = ('ethos/messages/detail_partial.html'
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest'
                 else 'ethos/messages/detail.html')
@@ -75,7 +76,7 @@ def message_dry_run(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
-    message = get_object_or_404(EthosMessage, pk=pk)
+    message = get_object_or_404(for_campus(EthosMessage.objects.all()), pk=pk)
     error = None
     try:
         plan = consume_message(message, dry_run=True)
@@ -96,7 +97,7 @@ def message_consume(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
-    message = get_object_or_404(EthosMessage, pk=pk)
+    message = get_object_or_404(for_campus(EthosMessage.objects.all()), pk=pk)
     # force=True because a human pressing this button is an explicit
     # instruction: it must work on a message that is already `failed` (the
     # normal re-run after fixing a handler) or `skipped` (a handler was

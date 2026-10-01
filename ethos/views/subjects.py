@@ -3,13 +3,20 @@ import logging
 
 from django.http import JsonResponse
 
+from ._client import ethos_client_or_error
+
 logger = logging.getLogger(__name__)
 
 
 def lookup_subjects(request):
     """AJAX endpoint to list subjects from Ethos."""
-    from ..library.ethos import Ethos
-    ethos = Ethos()
+    ethos, not_configured = ethos_client_or_error(request)
+    if not_configured:
+        return JsonResponse({
+            'status': 'warning',
+            'message': not_configured,
+            'action': 'display',
+        })
 
     abbreviation = request.GET.get('abbreviation', '').strip() or None
     subjects = ethos.get_subjects(abbreviation=abbreviation)
