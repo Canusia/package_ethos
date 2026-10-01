@@ -158,9 +158,10 @@ def poll(client=None, limit=None, max_batches=1, from_id=None):
         if is_multi_campus() and not EthosConsumeCursor.objects.filter(campus=campus).exists():
             label = campus.code if campus is not None else 'no campus'
             raise CursorNotInitialised(
-                f'{label} has no Ethos queue cursor. Run assign_ethos_campus to set '
-                f'it up, or poll once with --from-id N to choose the starting point; '
-                f'an automatic start at 0 would replay the whole queue.')
+                f'{label} has no Ethos queue cursor. If the deployment already had a '
+                f'campus-less cursor, run assign_ethos_campus --campus {label} to adopt it; '
+                f'for a new campus, poll once with --from-id N to choose the starting point. '
+                f'An automatic start at 0 would replay the whole queue.')
         cursor_id = EthosConsumeCursor.load(campus).last_processed_id
 
     for _ in range(max_batches):

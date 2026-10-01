@@ -357,12 +357,17 @@ in the host repo (package_ethos#4).
   is a no-op). Tests that assume this use `@override_settings(MULTI_CAMPUS=False)`.
 - **Commands** are `EthosCommand`s (`ethos/command_base.py`, a `cis` `CampusCommand` that turns
   `EthosNotConfigured`/`NoCampusContext` into `CommandError`). In multi-campus mode they take
-  `--campus` (or run for each campus).
+  `--campus` (required in multi-campus mode).
 - **`assign_ethos_campus --campus X [--dry-run] [--batch-size N]`** gives the pre-existing
   campus-less cursor, applications, messages and logs to campus X. Run once when turning
-  `MULTI_CAMPUS` on. Rows already on a campus are never touched.
+  `MULTI_CAMPUS` on. Rows already on a campus are never touched; an application id the campus
+  already has is skipped (reported), and if X already has a cursor while a campus-less one also
+  exists the cursor is left alone and the command ends with a `CommandError`.
 - **`CursorNotInitialised`** (`consume/poller.py`): `poll_ethos_messages` refuses to start for a
-  campus with no cursor row. Create one with `assign_ethos_campus` or `--from-id`.
+  campus with no cursor row. `assign_ethos_campus --campus X` only adopts an existing campus-less
+  cursor (the usual path when switching a single-campus deployment to multi-campus); it never
+  creates one. For a new campus, run `poll_ethos_messages --campus X --from-id N` once to choose
+  its starting point.
 - Migration `0006_campus` adds `campus` to cursor, message, log and application.
 
 ### Troubleshooting
@@ -371,7 +376,7 @@ in the host repo (package_ethos#4).
 |---|---|---|
 | `EthosNotConfigured: No Ethos credentials for campus X` | No `SECRETS['ethos'][X]` entry, or an empty `auth_code` | Add the entry |
 | `NoCampusContext` from `Ethos()` | Multi-campus code ran with no campus (task or script) | Pass `campus=` from the record, or run as a `CampusCommand` |
-| `poll_ethos_messages` refuses to start | No cursor row for that campus yet | `assign_ethos_campus --campus X`, or `--from-id` |
+| `poll_ethos_messages` refuses to start | No cursor row for that campus yet | Deployment had a campus-less cursor: `assign_ethos_campus --campus X`. New campus: `poll_ethos_messages --campus X --from-id N` once |
 | Ethos pages are empty after enabling multi-campus | Existing rows have a null campus | `assign_ethos_campus --campus X` |
 
 ## Technical Debt

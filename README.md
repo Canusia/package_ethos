@@ -170,7 +170,8 @@ only "Messages".
 
 | Setting | Description |
 |---|---|
-| `COLLEAGUE_AUTH_CODE` | Ethos API auth code from Secrets Manager |
+| `COLLEAGUE_AUTH_CODE` | Ethos API auth code from Secrets Manager (single-campus) |
+| `ETHOS_CREDENTIALS` | Multi-campus: `{<campus code>: {'auth_code': …, 'url': …}}`, from `SECRETS['ethos']` |
 
 ---
 
@@ -199,7 +200,7 @@ python manage.py assign_ethos_campus --campus EWU
 |---|---|
 | `EthosNotConfigured: No Ethos credentials for campus X` | Add `SECRETS['ethos'][X]` with a non-empty `auth_code` |
 | `NoCampusContext` from `Ethos()` | Pass `campus=` or run as a campus-scoped command |
-| `poll_ethos_messages` refuses to start (`CursorNotInitialised`) | `assign_ethos_campus --campus X`, or `--from-id` |
+| `poll_ethos_messages` refuses to start (`CursorNotInitialised`) | Had a campus-less cursor: `assign_ethos_campus --campus X` (adopts it). New campus: `poll_ethos_messages --campus X --from-id N` once |
 | Ethos pages empty after enabling multi-campus | `assign_ethos_campus --campus X` |
 
 ---
