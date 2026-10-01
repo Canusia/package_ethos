@@ -1,6 +1,7 @@
 import importlib.util
 import uuid
 from io import StringIO
+from unittest import mock
 
 from django.conf import settings
 from django.core.management import call_command
@@ -11,8 +12,10 @@ from cis.models.course import Campus
 
 if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.models import EthosConsumeCursor, EthosApplication, EthosMessage, EthosLog
+    from ethos.ethos.management.commands.assign_ethos_campus import Command
 else:
     from ethos.models import EthosConsumeCursor, EthosApplication, EthosMessage, EthosLog
+    from ethos.management.commands.assign_ethos_campus import Command
 
 
 def _campus():
@@ -75,14 +78,26 @@ class AssignEthosCampusTests(TestCase):
         with self.assertRaises(CommandError):
             _run('--campus', 'NOPE-NOPE')
 
-    def test_refuses_ambiguous_cursor_merge(self):
-        EthosConsumeCursor.objects.create(campus=None, last_processed_id=1)
+    def test_ambiguous_cursor_skips_cursor_but_assigns_the_rest_then_fails(self):
+        null_cur = EthosConsumeCursor.objects.create(campus=None, last_processed_id=1)
         EthosConsumeCursor.objects.create(campus=self.a, last_processed_id=9)
         _message(None)
+        EthosLog.objects.create(method='GET', url='u', message_type='t', campus=None)
         with self.assertRaises(CommandError) as cm:
             _run('--campus', self.a.code)
         self.assertIn('cursor', str(cm.exception))
-        self.assertEqual(EthosMessage.objects.filter(campus__isnull=True).count(), 1)
+        self.assertEqual(EthosMessage.objects.filter(campus=self.a).count(), 1)
+        self.assertEqual(EthosLog.objects.filter(campus=self.a).count(), 1)
+        null_cur.refresh_from_db()
+        self.assertIsNone(null_cur.campus)
+
+    def test_cursor_moves_last_so_a_failed_applications_step_leaves_it(self):
+        cur = self._seed()
+        with mock.patch.object(Command, '_assign_applications', side_effect=RuntimeError('boom')):
+            with self.assertRaises(RuntimeError):
+                _run('--campus', self.a.code)
+        cur.refresh_from_db()
+        self.assertIsNone(cur.campus)
 
     def test_application_clash_is_skipped_and_reported(self):
         EthosApplication.objects.create(ethos_id='g1', name='mine', campus=self.a)
