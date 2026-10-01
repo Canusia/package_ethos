@@ -174,6 +174,36 @@ only "Messages".
 
 ---
 
+## Multi-campus
+
+One deployment can serve several colleges, each with its own Ethos tenant. Needs `myce_cis>=0.1.5a`.
+
+Put each campus's key in `SECRETS['ethos'][<campus code>] = {'auth_code': '…', 'url': '…'}` (`url`
+optional); the host exposes it as `settings.ETHOS_CREDENTIALS`. Then construct a client with
+`Ethos(campus=campus)`. Pass the **record's** campus (a registration's section's campus, a term's
+campus); with no argument the client falls back to the ambient campus. In multi-campus mode it fails
+closed with `EthosNotConfigured` (no credentials) or `NoCampusContext` (no campus) rather than
+using another campus's key.
+
+Single-campus tenants are unchanged: `campus=None`, `COLLEAGUE_AUTH_CODE`, no filtering.
+
+Commands accept `--campus`. When turning `MULTI_CAMPUS` on, give the existing rows to the campus
+that has been using them:
+
+```bash
+python manage.py assign_ethos_campus --campus EWU --dry-run
+python manage.py assign_ethos_campus --campus EWU
+```
+
+| Issue | Resolution |
+|---|---|
+| `EthosNotConfigured: No Ethos credentials for campus X` | Add `SECRETS['ethos'][X]` with a non-empty `auth_code` |
+| `NoCampusContext` from `Ethos()` | Pass `campus=` or run as a campus-scoped command |
+| `poll_ethos_messages` refuses to start (`CursorNotInitialised`) | `assign_ethos_campus --campus X`, or `--from-id` |
+| Ethos pages empty after enabling multi-campus | `assign_ethos_campus --campus X` |
+
+---
+
 ## Library Mixins
 
 The `Ethos` class composes 15 mixins:

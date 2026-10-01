@@ -335,6 +335,45 @@ All write methods on `RegistrationMixin` (`update_registration_status`, `update_
 
 `mirror_linked_registrations` returns `False` if the response carries `failedRegistrations`, or any registration entry has `failureReasons` or `statusIndicator == 'F'`, or the JSON fails to parse.
 
+## Multi-campus
+
+One deployment can serve several colleges, each with its own Banner/Ethos tenant (Lamar: LIT and
+LSCPA). Requires `myce_cis>=0.1.5a`. Design: `docs/superpowers/specs/2026-10-01-ethos-per-campus-credentials-design.md`
+in the host repo (package_ethos#4).
+
+- **Credentials** live in `SECRETS['ethos'][<campus code>] = {'auth_code': …, 'url': …}` (`url`
+  optional, default `https://integrate.elluciancloud.com`). The host exposes that as
+  `settings.ETHOS_CREDENTIALS`. `ethos/credentials.py` `credentials_for(campus)` reads it. Never
+  stored in the database; the `Authorization` header is never stored in `EthosLog`.
+- **`Ethos(campus=None)`** is instance-scoped. An explicit `campus` wins, then the ambient
+  `current_campus_or_none()`. In multi-campus mode a missing entry or empty `auth_code` raises
+  `EthosNotConfigured`, and no campus at all raises `NoCampusContext`. It fails closed: it never
+  borrows another campus's key or the deployment-wide `COLLEAGUE_AUTH_CODE`.
+- **The record decides the campus.** For record-driven calls pass the record's campus
+  (registration → section → course → campus; term → academic year → campus). The ambient campus is
+  only a fallback.
+- **Single-campus tenants are unchanged.** `MULTI_CAMPUS` off means `campus=None`, the
+  deployment-wide `COLLEAGUE_AUTH_CODE`, and no campus filtering (`ethos/campus.py` `for_campus`
+  is a no-op). Tests that assume this use `@override_settings(MULTI_CAMPUS=False)`.
+- **Commands** are `EthosCommand`s (`ethos/command_base.py`, a `cis` `CampusCommand` that turns
+  `EthosNotConfigured`/`NoCampusContext` into `CommandError`). In multi-campus mode they take
+  `--campus` (or run for each campus).
+- **`assign_ethos_campus --campus X [--dry-run] [--batch-size N]`** gives the pre-existing
+  campus-less cursor, applications, messages and logs to campus X. Run once when turning
+  `MULTI_CAMPUS` on. Rows already on a campus are never touched.
+- **`CursorNotInitialised`** (`consume/poller.py`): `poll_ethos_messages` refuses to start for a
+  campus with no cursor row. Create one with `assign_ethos_campus` or `--from-id`.
+- Migration `0006_campus` adds `campus` to cursor, message, log and application.
+
+### Troubleshooting
+
+| Issue | Cause | Resolution |
+|---|---|---|
+| `EthosNotConfigured: No Ethos credentials for campus X` | No `SECRETS['ethos'][X]` entry, or an empty `auth_code` | Add the entry |
+| `NoCampusContext` from `Ethos()` | Multi-campus code ran with no campus (task or script) | Pass `campus=` from the record, or run as a `CampusCommand` |
+| `poll_ethos_messages` refuses to start | No cursor row for that campus yet | `assign_ethos_campus --campus X`, or `--from-id` |
+| Ethos pages are empty after enabling multi-campus | Existing rows have a null campus | `assign_ethos_campus --campus X` |
+
 ## Technical Debt
 
 `registration.py` — `update_registration_status`, `update_registration`, `mirror_registration`, and `mirror_linked_registrations` bypass `_api_request` and call `requests` directly, manually creating `EthosLog` entries. These should be refactored to use `_api_request` for consistency.
