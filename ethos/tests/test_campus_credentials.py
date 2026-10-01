@@ -32,6 +32,17 @@ class SingleCampusCredentialTests(TestCase):
         client = Ethos()
         self.assertEqual((client.AUTH_CODE, client.URL), ('single-key', DEFAULT_URL))
 
+    def test_explicit_campus_is_ignored(self):
+        self.assertIsNone(Ethos(campus=_campus()).campus)
+
+    def test_ambient_campus_is_ignored(self):
+        with campus_context(_campus()):
+            self.assertIsNone(Ethos().campus)
+
+    def test_construction_runs_no_queries(self):
+        with self.assertNumQueries(0):
+            Ethos()
+
 
 @override_settings(MULTI_CAMPUS=True)
 class MultiCampusCredentialTests(TestCase):

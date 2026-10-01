@@ -1,7 +1,7 @@
 import importlib.util
 from unittest.mock import patch
 
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, override_settings
 
 if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.library.ethos import Ethos
@@ -17,7 +17,7 @@ HOLDS = [
 
 
 @override_settings(MULTI_CAMPUS=False)
-class FilteredPersonHoldsTests(TestCase):
+class FilteredPersonHoldsTests(SimpleTestCase):
     @patch.object(Ethos, '_load_sis_guids',
                   return_value={'hold_restriction_codes': ['RSCH']})
     @patch.object(Ethos, 'get_person_holds')

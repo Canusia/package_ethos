@@ -25,14 +25,19 @@ class EthosBase:
     AUTH_CODE = getattr(settings, 'COLLEAGUE_AUTH_CODE', '')
 
     def __init__(self, campus=None):
-        """Client for ``campus`` -- explicit, else the ambient campus (request host,
-        CampusCommand, campus_context). Multi-campus with no campus raises
-        NoCampusContext; a campus without credentials raises EthosNotConfigured."""
+        """Client for ``campus``. Single-campus deployments are always campus-less
+        (``self.campus`` is None -- deployment-wide), ignoring any explicit or ambient
+        campus, with no DB query. Multi-campus: explicit campus, else the ambient one
+        (request host, CampusCommand, campus_context), else NoCampusContext; a campus
+        without credentials raises EthosNotConfigured."""
         from cis.campus_context import current_campus_or_none, is_multi_campus, NoCampusContext
         from ..credentials import credentials_for
-        campus = campus if campus is not None else current_campus_or_none()
-        if campus is None and is_multi_campus():
-            raise NoCampusContext('Ethos() needs a campus on a multi-campus deployment.')
+        if not is_multi_campus():
+            campus = None
+        else:
+            campus = campus if campus is not None else current_campus_or_none()
+            if campus is None:
+                raise NoCampusContext('Ethos() needs a campus on a multi-campus deployment.')
         self.campus = campus
         self.AUTH_CODE, self.URL = credentials_for(campus)
         self._cached_token = None
