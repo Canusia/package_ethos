@@ -21,14 +21,14 @@ nothing happened rather than showing nothing at all.
 import json
 
 from django.core.management import call_command
-from cis.management.campus_command import CampusCommand
 from cis.signals.crontab import cron_task_done, cron_task_started
 
+from ...command_base import EthosCommand
 from ...consume import config
 from ...consume.poller import poll
 
 
-class Command(CampusCommand):
+class Command(EthosCommand):
     help = 'Poll the Ethos change-notification queue and store notifications.'
 
     def add_arguments(self, parser):

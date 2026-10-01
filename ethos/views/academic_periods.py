@@ -27,7 +27,8 @@ def lookup_guid(request):
 
     record = get_object_or_404(AcademicYear, pk=ids[0])
 
-    ethos, not_configured = ethos_client_or_error(request)
+    # The year's own campus decides the Banner tenant; a campus-less year uses the host's.
+    ethos, not_configured = ethos_client_or_error(request, campus=record.campus)
     if not_configured:
         return JsonResponse({
             'status': 'warning',

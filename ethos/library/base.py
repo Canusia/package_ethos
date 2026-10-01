@@ -65,9 +65,20 @@ class EthosBase:
         logger.error('Unable to get auth token')
         return None
 
+    def _settings_context(self):
+        """Campus-scoped settings read by this client must be its own campus's, not the
+        ambient one: an Ethos(campus=B) built while serving campus A reads B's rows.
+        Campus-less clients (single-campus) read exactly as before."""
+        import contextlib
+        if self.campus is None:
+            return contextlib.nullcontext()
+        from cis.campus_context import campus_context
+        return campus_context(self.campus)
+
     def _load_sis_guids(self):
-        """Load and parse SIS GUID mappings from database settings."""
-        sis_guids = sis_settings.from_db()
+        """Load and parse SIS GUID mappings from this client's campus settings."""
+        with self._settings_context():
+            sis_guids = sis_settings.from_db()
         try:
             return json.loads(sis_guids.get('guids', "{}"))
         except Exception as e:

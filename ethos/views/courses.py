@@ -11,6 +11,16 @@ from ._client import ethos_client_or_error
 logger = logging.getLogger(__name__)
 
 
+def _client_for(request, record, clients):
+    """(client, error) for the course's own campus, built once per campus per request.
+    A course of campus B acted on from campus A's host gets B's Banner data; a
+    campus-less course falls back to the ambient campus."""
+    key = record.campus_id
+    if key not in clients:
+        clients[key] = ethos_client_or_error(request, campus=record.campus)
+    return clients[key]
+
+
 def _sync_course(record, ethos):
     """Fetch Ethos data for a single Course and apply updates. Returns (changed_fields, error_message)."""
     course_data = None
@@ -72,18 +82,14 @@ def lookup_by_title(request):
             'message': 'No course selected.',
         })
 
-    ethos, not_configured = ethos_client_or_error(request)
-    if not_configured:
-        return JsonResponse({
-            'outcome': 'alert',
-            'status': 'error',
-            'title': 'Error',
-            'message': not_configured,
-        })
-
+    clients = {}
     lines = []
     for course_id in ids:
         record = get_object_or_404(Course, pk=course_id)
+        ethos, not_configured = _client_for(request, record, clients)
+        if not_configured:
+            lines.append(f'{record.name}: {not_configured}')
+            continue
 
         results = ethos.get_courses(title=record.title)
         course_data = results[0] if results else None
@@ -144,18 +150,14 @@ def update_from_ethos(request):
             'message': 'No course selected.',
         })
 
-    ethos, not_configured = ethos_client_or_error(request)
-    if not_configured:
-        return JsonResponse({
-            'outcome': 'alert',
-            'status': 'error',
-            'title': 'Error',
-            'message': not_configured,
-        })
-
+    clients = {}
     lines = []
     for course_id in ids:
         record = get_object_or_404(Course, pk=course_id)
+        ethos, not_configured = _client_for(request, record, clients)
+        if not_configured:
+            lines.append(f'{record.name}: {not_configured}')
+            continue
         changed, error = _sync_course(record, ethos)
         if error:
             lines.append(f'{record.name}: {error}')

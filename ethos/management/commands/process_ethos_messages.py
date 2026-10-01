@@ -9,15 +9,14 @@ Always processed in ascending queue_id order, but each message stands alone: a
 failure does not block the next one.
 """
 
-from cis.management.campus_command import CampusCommand
-
 from ...campus import for_campus
+from ...command_base import EthosCommand
 from ...consume import config
 from ...consume.service import consume_message
 from ...models import EthosMessage
 
 
-class Command(CampusCommand):
+class Command(EthosCommand):
     help = 'Consume stored Ethos change-notifications.'
 
     def add_arguments(self, parser):

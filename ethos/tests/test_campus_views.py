@@ -128,7 +128,12 @@ class CampusViewTests(TestCase):
             from ethos.ethos.views.courses import update_from_ethos
         else:
             from ethos.views.courses import update_from_ethos
-        request = self._req('post', data={'ids[]': ['1']})
+        # The client is built per record now (its campus decides), so the course is real.
+        from cis.models.course import Cohort, Course
+        course = Course.objects.create(
+            cohort=Cohort.objects.create(name='Math', designator='MTH'),
+            catalog_number='101', name='MTH 101', title='Algebra', campus=self.a)
+        request = self._req('post', data={'ids[]': [str(course.pk)]})
         with campus_context(self.a):
             response = update_from_ethos(request)
         self.assertEqual(response.status_code, 200)
