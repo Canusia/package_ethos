@@ -110,3 +110,14 @@ class CampusProcessTests(TestCase):
             call_command('process_ethos_messages', campus=self.b.code, id=other.pk,
                          stdout=StringIO())
         cm.assert_not_called()
+
+
+@override_settings(MULTI_CAMPUS=True)
+class CampusFromIdEmptyQueueTests(TestCase):
+    def test_from_id_on_an_empty_queue_still_initialises_the_cursor(self):
+        campus = _campus()
+
+        poll(client=fake_client([[]], campus=campus), limit=100, from_id=5)
+
+        self.assertEqual(EthosConsumeCursor.load(campus).last_processed_id, 5)
+        poll(client=fake_client([[]], campus=campus), limit=100)

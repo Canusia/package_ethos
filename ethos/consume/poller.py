@@ -148,6 +148,11 @@ def poll(client=None, limit=None, max_batches=1, from_id=None):
 
     if from_id is not None:
         cursor_id = from_id
+        # Record the starting point now: an empty queue stores nothing, and
+        # without a row the next poll would refuse again. Never moves an
+        # existing cursor (it only ever advances, see _store_good_records).
+        if not EthosConsumeCursor.objects.filter(campus=campus).exists():
+            EthosConsumeCursor.objects.create(campus=campus, last_processed_id=from_id)
     else:
         from cis.campus_context import is_multi_campus
         if is_multi_campus() and not EthosConsumeCursor.objects.filter(campus=campus).exists():
