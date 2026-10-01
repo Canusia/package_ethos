@@ -116,6 +116,7 @@ class CronSyncTests(TestCase):
         self.assertEqual(rows.first().cron, '0 2 * * *')
 
 
+@override_settings(MULTI_CAMPUS=False)
 class PollCommandGateTests(TestCase):
     def test_exits_without_calling_ethos_when_disabled(self):
         _seed(is_active='No')
@@ -168,6 +169,7 @@ class PollCommandGateTests(TestCase):
         self.assertIn('27', out.getvalue())
 
 
+@override_settings(MULTI_CAMPUS=False)
 class CronSignalTests(TestCase):
     """cron_task_started/done drive the CronLog UI.
 
@@ -251,6 +253,7 @@ class CronSignalTests(TestCase):
         self.assertEqual(self.done, [])
 
 
+@override_settings(MULTI_CAMPUS=False)
 class ConsumeAfterPollTests(TestCase):
     def _run(self):
         with patch(f'{PKG}.management.commands.poll_ethos_messages.poll',

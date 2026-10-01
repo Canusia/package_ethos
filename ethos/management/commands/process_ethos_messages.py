@@ -9,17 +9,19 @@ Always processed in ascending queue_id order, but each message stands alone: a
 failure does not block the next one.
 """
 
-from django.core.management.base import BaseCommand
+from cis.management.campus_command import CampusCommand
 
+from ...campus import for_campus
 from ...consume import config
 from ...consume.service import consume_message
 from ...models import EthosMessage
 
 
-class Command(BaseCommand):
+class Command(CampusCommand):
     help = 'Consume stored Ethos change-notifications.'
 
     def add_arguments(self, parser):
+        super().add_arguments(parser)
         parser.add_argument('--id', type=int, default=None,
                             help='Process one EthosMessage by primary key.')
         parser.add_argument('--resource', default=None,
@@ -34,9 +36,9 @@ class Command(BaseCommand):
 
     def _queryset(self, options):
         if options['id'] is not None:
-            return EthosMessage.objects.filter(pk=options['id'])
+            return for_campus(EthosMessage.objects.filter(pk=options['id']))
 
-        qs = EthosMessage.objects.all()
+        qs = for_campus(EthosMessage.objects.all())
         if not options['force']:
             qs = qs.filter(status=EthosMessage.PENDING)
 

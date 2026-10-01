@@ -24,6 +24,7 @@ def _message(queue_id, **kwargs):
     return EthosMessage.objects.create(**defaults)
 
 
+@override_settings(MULTI_CAMPUS=False)
 class ProcessCommandTests(TestCase):
     def setUp(self):
         APPLIED.clear()

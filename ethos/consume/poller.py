@@ -21,6 +21,14 @@ from . import config
 logger = logging.getLogger(__name__)
 
 
+class CursorNotInitialised(Exception):
+    """A campus has no queue cursor and no starting point was given.
+
+    Creating one at 0 would replay the whole Ethos retention window into a
+    campus that has never polled, so multi-campus polling refuses instead.
+    """
+
+
 def _get_client():
     from ..library.ethos import Ethos
     return Ethos()
@@ -43,7 +51,7 @@ def _sort_key(record):
 
 
 @transaction.atomic
-def _store_good_records(records):
+def _store_good_records(records, campus=None):
     """Persist every well-formed record in the batch and advance the cursor.
 
     Atomic by design — a genuine mid-batch failure (e.g. the cursor save
@@ -75,16 +83,16 @@ def _store_good_records(records):
 
             queue_id = fields['queue_id']
 
-            if EthosMessage.objects.filter(queue_id=queue_id).exists():
+            if EthosMessage.objects.filter(queue_id=queue_id, campus=campus).exists():
                 duplicates += 1
             else:
-                EthosMessage.objects.create(**fields)
+                EthosMessage.objects.create(campus=campus, **fields)
                 stored += 1
 
             highest = queue_id if highest is None else max(highest, queue_id)
 
         if highest is not None:
-            cursor = EthosConsumeCursor.load()
+            cursor = EthosConsumeCursor.load(campus)
             cursor.last_processed_id = max(cursor.last_processed_id, highest)
             cursor.last_polled_at = timezone.now()
             cursor.save()
@@ -97,7 +105,7 @@ def _store_good_records(records):
     return stored, duplicates, highest, malformed
 
 
-def _store_batch(records):
+def _store_batch(records, campus=None):
     """Persist the batch, then raise loudly if any record was malformed.
 
     The malformed check happens OUTSIDE `_store_good_records`'s atomic block
@@ -105,7 +113,7 @@ def _store_batch(records):
     committed before we raise, so the operator's loud failure never costs the
     well-formed notifications that Ethos has already advanced past.
     """
-    stored, duplicates, highest, malformed = _store_good_records(records)
+    stored, duplicates, highest, malformed = _store_good_records(records, campus)
 
     if malformed:
         raise ValueError(
@@ -136,7 +144,19 @@ def poll(client=None, limit=None, max_batches=1, from_id=None):
 
     totals = {'stored': 0, 'duplicates': 0, 'batches': 0, 'last_id': None}
 
-    cursor_id = from_id if from_id is not None else EthosConsumeCursor.load().last_processed_id
+    campus = getattr(client, 'campus', None)
+
+    if from_id is not None:
+        cursor_id = from_id
+    else:
+        from cis.campus_context import is_multi_campus
+        if is_multi_campus() and not EthosConsumeCursor.objects.filter(campus=campus).exists():
+            label = campus.code if campus is not None else 'no campus'
+            raise CursorNotInitialised(
+                f'{label} has no Ethos queue cursor. Run assign_ethos_campus to set '
+                f'it up, or poll once with --from-id N to choose the starting point; '
+                f'an automatic start at 0 would replay the whole queue.')
+        cursor_id = EthosConsumeCursor.load(campus).last_processed_id
 
     for _ in range(max_batches):
         records, _log = client.get_messages(limit=limit, last_processed_id=cursor_id)
@@ -145,7 +165,7 @@ def poll(client=None, limit=None, max_batches=1, from_id=None):
         if not records:
             break
 
-        stored, duplicates, highest = _store_batch(records)
+        stored, duplicates, highest = _store_batch(records, campus)
         totals['stored'] += stored
         totals['duplicates'] += duplicates
         if highest is not None:

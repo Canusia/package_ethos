@@ -4,7 +4,7 @@ import json
 import os
 from unittest.mock import MagicMock, patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.consume.poller import poll
@@ -24,14 +24,16 @@ def load_sample():
         return json.load(fh)
 
 
-def fake_client(batches, remaining=0):
+def fake_client(batches, remaining=0, campus=None):
     """A client whose get_messages returns each batch in turn."""
     client = MagicMock()
+    client.campus = campus
     client.get_messages.side_effect = [(b, MagicMock()) for b in batches]
     client.available_message_count.return_value = remaining
     return client
 
 
+@override_settings(MULTI_CAMPUS=False)
 class PollerTests(TestCase):
     def setUp(self):
         self.sample = load_sample()

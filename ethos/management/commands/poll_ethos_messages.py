@@ -21,18 +21,18 @@ nothing happened rather than showing nothing at all.
 import json
 
 from django.core.management import call_command
-from django.core.management.base import BaseCommand
-
+from cis.management.campus_command import CampusCommand
 from cis.signals.crontab import cron_task_done, cron_task_started
 
 from ...consume import config
 from ...consume.poller import poll
 
 
-class Command(BaseCommand):
+class Command(CampusCommand):
     help = 'Poll the Ethos change-notification queue and store notifications.'
 
     def add_arguments(self, parser):
+        super().add_arguments(parser)
         parser.add_argument('-t', '--time', type=str, help='Time of run')
         parser.add_argument('--limit', type=int, default=None,
                             help='Notifications per request (Ethos allows 1-1000). '
