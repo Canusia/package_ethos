@@ -86,6 +86,24 @@ class CampusCommandTests(TestCase):
         self.assertEqual(seen, [self.a])
 
 
+@override_settings(MULTI_CAMPUS=False)
+class SingleCampusCoursesTests(TestCase):
+    def test_existing_campusless_course_is_matched_not_duplicated(self):
+        _campus()  # the deployment campus: stamping it would orphan the campus-less row
+        cohort = Cohort.objects.create(name='Math', designator='MTH', external_sis_id='sub-1')
+        existing = Course.objects.create(cohort=cohort, catalog_number='101', name='MTH 101',
+                                         title='Algebra', status='Inactive', campus=None)
+        course = {'id': 'c-1', 'number': '101', 'title': 'Algebra',
+                  'subject': {'id': 'sub-1', 'abbreviation': 'MTH'},
+                  'credits': [{'minimum': 3}]}
+        factory = _recording_ethos([], get_courses=[course])
+        with patch(f'{P}.management.commands.import_courses_from_ethos.Ethos', factory):
+            call_command('import_courses_from_ethos', create=True, stdout=StringIO())
+        self.assertEqual(Course.objects.filter(cohort=cohort, catalog_number='101').count(), 1)
+        existing.refresh_from_db()
+        self.assertIsNone(existing.campus)
+
+
 @override_settings(MULTI_CAMPUS=True)
 class SectionTaskTests(TestCase):
     def test_task_builds_ethos_for_the_terms_campus(self):

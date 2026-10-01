@@ -1,11 +1,17 @@
 import logging
 
-from cis.campus_context import current_campus_or_none
+from cis.campus_context import current_campus, is_multi_campus
 
 from ...command_base import EthosCommand
 from ...library.ethos import Ethos
 
 logger = logging.getLogger(__name__)
+
+
+def _course_campus():
+    # Single-campus courses are stored campus-less; stamping the deployment campus would stop
+    # existing rows matching get_or_create and duplicate them.
+    return current_campus() if is_multi_campus() else None
 
 
 class Command(EthosCommand):
@@ -69,7 +75,7 @@ class Command(EthosCommand):
             course, was_created = Course.objects.get_or_create(
                 cohort=cohort,
                 catalog_number=number,
-                campus=current_campus_or_none(),
+                campus=_course_campus(),
                 defaults={
                     'name': name,
                     'title': title,
