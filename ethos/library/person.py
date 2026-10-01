@@ -426,7 +426,7 @@ class PersonMixin(EthosBase):
             if verbose:
                 print(resp.status_code, resp.content)
 
-            log = EthosLog.objects.create(
+            log = self._log(
                 method='PUT',
                 url=url,
                 message_type='person_update_ethnicity',
@@ -463,7 +463,7 @@ class PersonMixin(EthosBase):
         if verbose:
             print(resp.status_code, resp.content)
 
-        log = EthosLog.objects.create(
+        log = self._log(
             method='GET',
             url=url,
             message_type='person_request_status',

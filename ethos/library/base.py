@@ -133,6 +133,12 @@ class EthosBase:
         except (TypeError, ValueError):
             return 0
 
+    def _log(self, **fields):
+        """Create an EthosLog stamped with this client's campus (None in single-campus mode)."""
+        log = EthosLog(campus=self.campus, **fields)
+        log.save()
+        return log
+
     def _api_request(self, method, url, message_type, description='', data=None, json_data=None, headers=None, **kwargs):
         """Make an authenticated API request and log it to EthosLog."""
         token = self.get_auth_token()
@@ -160,7 +166,7 @@ class EthosBase:
         if verbose:
             print(resp.status_code, resp.content)
 
-        log = EthosLog.objects.create(
+        log = self._log(
             method=method,
             url=url,
             message_type=message_type,

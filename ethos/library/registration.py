@@ -191,7 +191,7 @@ class RegistrationMixin(EthosBase):
 
         resp = requests.put(url, headers=headers, json=json_data)
 
-        log = EthosLog.objects.create(
+        log = self._log(
             method='PUT',
             url=url,
             message_type='registration_status',
@@ -246,7 +246,7 @@ class RegistrationMixin(EthosBase):
 
         resp = requests.put(url, headers=headers, json=json_data)
 
-        log = EthosLog.objects.create(
+        log = self._log(
             method='PUT',
             url=url,
             message_type=f'class_{status}',
@@ -283,7 +283,7 @@ class RegistrationMixin(EthosBase):
 
         resp = requests.post(url, headers=headers, json=json_data)
 
-        log = EthosLog.objects.create(
+        log = self._log(
             method='POST',
             url=url,
             message_type='linked_class_register',
@@ -356,7 +356,7 @@ class RegistrationMixin(EthosBase):
 
         resp = requests.post(url, headers=headers, json=json_body)
 
-        log = EthosLog.objects.create(
+        log = self._log(
             method='POST',
             url=url,
             message_type=f'class_{status}',
@@ -409,7 +409,7 @@ class RegistrationMixin(EthosBase):
 
         resp = requests.post(url, headers=headers, json=json_body)
 
-        log = EthosLog.objects.create(
+        log = self._log(
             method='POST',
             url=url,
             message_type='self_register',
