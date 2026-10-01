@@ -21,6 +21,10 @@ class EthosLog(models.Model):
     request_body    = models.JSONField(blank=True, null=True)
     response_status = models.IntegerField(null=True, db_index=True)
     response_body   = models.TextField(blank=True)
+    campus = models.ForeignKey(
+        'cis.Campus', null=True, blank=True,
+        on_delete=models.PROTECT, related_name='+',
+    )
 
     class Meta:
         ordering = ['-sent_on']
@@ -68,13 +72,22 @@ class EthosLog(models.Model):
 class EthosApplication(models.Model):
     """A top-level Ethos application/integration (e.g. 'CRM Advise Test')."""
 
-    ethos_id = models.CharField(max_length=100, unique=True)  # GUID from API
+    ethos_id = models.CharField(max_length=100)  # GUID from API
     name = models.CharField(max_length=200)
     about = models.JSONField(default=list)   # [{"name": "Advise API", "version": "4.1.0.0"}]
     synced_at = models.DateTimeField(auto_now=True)
+    campus = models.ForeignKey(
+        'cis.Campus', null=True, blank=True,
+        on_delete=models.PROTECT, related_name='+',
+    )
 
     class Meta:
         ordering = ['name']
+        constraints = [
+            models.UniqueConstraint(fields=['campus', 'ethos_id'], name='ethosapp_campus_ethos_id'),
+            models.UniqueConstraint(fields=['ethos_id'], condition=models.Q(campus__isnull=True),
+                                    name='ethosapp_ethos_id_no_campus'),
+        ]
 
     def __str__(self):
         return self.name
@@ -168,6 +181,10 @@ class EthosMessage(models.Model):
     target_type   = models.CharField(max_length=100, blank=True)   # e.g. 'cis.StudentRegistration'
     target_pk     = models.CharField(max_length=64, blank=True)
     target_label  = models.CharField(max_length=255, blank=True)   # survives target deletion
+    campus = models.ForeignKey(
+        'cis.Campus', null=True, blank=True,
+        on_delete=models.PROTECT, related_name='+',
+    )
 
     class Meta:
         ordering = ['-queue_id']
@@ -194,7 +211,7 @@ class EthosMessage(models.Model):
 
 
 class EthosConsumeCursor(models.Model):
-    """Singleton queue pointer.
+    """Queue pointer, one per campus (a single null-campus row when not multi-campus).
 
     Deliberately a table rather than MAX(queue_id) over EthosMessage: retention
     deletes rows, and a cursor derived from a purged table would replay the whole
@@ -203,13 +220,24 @@ class EthosConsumeCursor(models.Model):
 
     last_processed_id = models.BigIntegerField(default=0)
     last_polled_at    = models.DateTimeField(null=True, blank=True)
+    campus = models.ForeignKey(
+        'cis.Campus', null=True, blank=True,
+        on_delete=models.PROTECT, related_name='+',
+    )
+
+    class Meta:
+        # Postgres treats NULLs as distinct, so this does not limit the null
+        # (single-campus) row; load() keeps that to one by reusing the oldest.
+        constraints = [
+            models.UniqueConstraint(fields=['campus'], name='ethoscursor_campus'),
+        ]
 
     def __str__(self):
         return f"cursor@{self.last_processed_id}"
 
     @classmethod
-    def load(cls):
-        cursor = cls.objects.order_by('pk').first()
+    def load(cls, campus=None):
+        cursor = cls.objects.filter(campus=campus).order_by('pk').first()
         if cursor is None:
-            cursor = cls.objects.create()
+            cursor = cls.objects.create(campus=campus)
         return cursor
