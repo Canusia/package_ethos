@@ -301,6 +301,12 @@ METHOD_REGISTRY = {
                     {'name': 'section_id', 'type': 'str', 'required': True, 'placeholder': 'Section Ethos GUID'},
                 ],
             },
+            'get_unverified_grades': {
+                'doc': 'Return Banner unverified-grade records for a section-registration GUID (empty = none yet).',
+                'params': [
+                    {'name': 'section_registration_id', 'type': 'str', 'required': True, 'placeholder': 'Section registration GUID'},
+                ] + _PAGINATION_PARAMS,
+            },
         },
     },
     'holds': {

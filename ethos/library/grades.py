@@ -15,6 +15,12 @@ from .base import EthosBase
 
 logger = logging.getLogger(__name__)
 
+UNVERIFIED_GRADES_ACCEPT = 'application/vnd.hedtech.integration.v1+json'
+UNVERIFIED_GRADES_SUBMISSION = (
+    'application/vnd.hedtech.integration.student-unverified-grades-submissions.v1+json'
+)
+NIL_GUID = '00000000-0000-0000-0000-000000000000'
+
 
 class GradesMixin(EthosBase):
     """Grade reads and write operations for the CE workflow."""
@@ -109,3 +115,53 @@ class GradesMixin(EthosBase):
             return resp.json()
         logger.error('submit_student_grade failed: %s %s', resp.status_code, resp.text)
         return None
+
+    def get_unverified_grades(self, section_registration_id, **kwargs):
+        """Return student-unverified-grades records for one section registration.
+
+        An empty list means Banner has none, so a submission must POST (create).
+        """
+        criteria = {'sectionRegistration': {'id': section_registration_id}}
+        url = f'{self.URL}/api/student-unverified-grades?' + urlencode({'criteria': json.dumps(criteria)})
+        accept = self.get_preferred_accept_header('student-unverified-grades') or UNVERIFIED_GRADES_ACCEPT
+        resp, log = self._api_request(
+            'GET', url, 'student_unverified_grades', headers={'Accept': accept}, **kwargs)
+        if resp.ok:
+            return resp.json()
+        logger.error('get_unverified_grades failed: %s %s', resp.status_code, resp.text)
+        return []
+
+    def submit_unverified_grade(self, section_registration_id, grade_id, grade_type_id,
+                                submitted_by_id=None, record_id=None, **kwargs):
+        """Create (POST) or update (PUT) a Banner unverified grade.
+
+        `submissions` is part of the Content-Type, not the URL. `submittedBy` is
+        optional in the schema and omitted when not given.
+
+        Returns:
+            (success: bool, log: EthosLog). On success the record id is
+            ``log.response_json.get('id')``.
+        """
+        payload = {
+            'id': record_id or NIL_GUID,
+            'sectionRegistration': {'id': section_registration_id},
+            'grade': {'type': {'id': grade_type_id}, 'grade': {'id': grade_id}},
+        }
+        if submitted_by_id:
+            payload['submittedBy'] = {'id': submitted_by_id}
+
+        if record_id:
+            method, url = 'PUT', f'{self.URL}/api/student-unverified-grades/{record_id}'
+        else:
+            method, url = 'POST', f'{self.URL}/api/student-unverified-grades'
+
+        accept = self.get_preferred_accept_header('student-unverified-grades') or UNVERIFIED_GRADES_ACCEPT
+        resp, log = self._api_request(
+            method, url, 'submit_unverified_grade',
+            data=json.dumps(payload),
+            headers={'Accept': accept, 'Content-Type': UNVERIFIED_GRADES_SUBMISSION},
+            **kwargs,
+        )
+        if not resp.ok:
+            logger.error('submit_unverified_grade failed: %s %s', resp.status_code, resp.text)
+        return resp.ok, log
