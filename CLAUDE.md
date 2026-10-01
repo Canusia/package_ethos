@@ -31,6 +31,7 @@ ethos/                           ← git submodule root (outer package)
     │   ├── poller.py             # poll() — drains /consume into EthosMessage, advances EthosConsumeCursor atomically
     │   └── service.py            # consume_message() — dispatches one stored EthosMessage to its handler
     ├── tasks.py                 # django-tasks background task: import_sections_for_term
+    ├── grade_push.py            # push_final_grade / config_errors — Banner unverified FINAL grade for the grades SIS push
     ├── urls.py                  # All ethos URL patterns (app_name='ethos')
     ├── library/                 # All Ethos API client code
     │   ├── base.py              # EthosBase — auth, _api_request, get_preferred_accept_header
@@ -44,7 +45,7 @@ ethos/                           ← git submodule root (outer package)
     │   ├── section_detail.py    # SectionDetailMixin — meeting times, instructors, enrollment, registrations
     │   ├── student_records.py   # StudentRecordsMixin — student record, programs, standings, registrations
     │   ├── student_account.py   # StudentAccountMixin — account summary/details, financial aid
-    │   ├── grades.py            # GradesMixin — grade reads + final grade submission
+    │   ├── grades.py            # GradesMixin — grade reads, unverified-grade read/submit
     │   ├── holds.py             # HoldsMixin — list/get/release person holds
     │   ├── reference.py         # ReferenceMixin — academic levels, methods, schemes, catalogs, institutions
     │   ├── registration.py      # RegistrationMixin — section registrations, holds POST, mirroring (all writes return `(success, log)`)
