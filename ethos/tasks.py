@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 @task(queue_name='default')
 def import_sections_for_term(term_id: str) -> dict:
     """Fetch and import all sections for a term from Ethos. Returns counts dict."""
+    from cis.campus_context import campus_context
     from cis.models.term import Term
     from .library.ethos import Ethos
     from cis.services.tenant_services import get_tenant_service
@@ -17,16 +18,16 @@ def import_sections_for_term(term_id: str) -> dict:
     period_id = str(term.external_sis_id) if term.external_sis_id else None
 
     campus = term.academic_year.campus
+    with campus_context(campus):
+        if not period_id:
+            ethos = Ethos(campus=campus)
+            period_id = ethos.get_academic_period_id(term.code)
 
-    if not period_id:
+        if not period_id:
+            return {'error': 'Could not resolve Ethos period ID for this term'}
+
         ethos = Ethos(campus=campus)
-        period_id = ethos.get_academic_period_id(term.code)
-
-    if not period_id:
-        return {'error': 'Could not resolve Ethos period ID for this term'}
-
-    ethos = Ethos(campus=campus)
-    raw_sections = ethos.get_sections(period_id=period_id)
-    counts = SectionImporter().import_sections(raw_sections, term=term)
-    counts['total_fetched'] = len(raw_sections)
-    return counts
+        raw_sections = ethos.get_sections(period_id=period_id)
+        counts = SectionImporter().import_sections(raw_sections, term=term)
+        counts['total_fetched'] = len(raw_sections)
+        return counts

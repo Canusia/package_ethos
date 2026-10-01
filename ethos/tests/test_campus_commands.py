@@ -103,3 +103,22 @@ class SectionTaskTests(TestCase):
             tasks.import_sections_for_term.func(1)
         self.assertTrue(seen)
         self.assertTrue(all(c == campus for c in seen))
+
+    def test_importer_runs_inside_the_terms_campus_context(self):
+        campus = _campus()
+        term = SimpleNamespace(pk=1, external_sis_id='p-1', code='X',
+                               academic_year=SimpleNamespace(campus=campus))
+        ambient = []
+        importer = MagicMock()
+
+        def record(*args, **kwargs):
+            ambient.append(current_campus_or_none())
+            return {}
+        importer.return_value.import_sections.side_effect = record
+        factory = _recording_ethos([], get_sections=[])
+        with patch('cis.models.term.Term.objects.get', return_value=term), \
+             patch(f'{P}.library.ethos.Ethos', factory), \
+             patch('cis.services.tenant_services.get_tenant_service',
+                   return_value=SimpleNamespace(SISImporter=importer)):
+            tasks.import_sections_for_term.func(1)
+        self.assertEqual(ambient, [campus])
