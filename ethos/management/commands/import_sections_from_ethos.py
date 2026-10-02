@@ -116,10 +116,9 @@ class Command(EthosCommand):
             )
 
     def _write_csv(self, raw_sections, path):
-        from django.db.models import Q
+        from cis.highschool_scope import highschool_for_building_code
         from cis.models.term import Term
         from cis.models.course import Cohort, Course
-        from cis.models.highschool import HighSchool
         from cis.models.teacher import Teacher
 
         fieldnames = [
@@ -185,7 +184,7 @@ class Command(EthosCommand):
                 # ── highschool status ──────────────────────────────────────────
                 if not building_code:
                     highschool_status = 'no_building_code'
-                elif HighSchool.objects.filter(Q(sau=building_code) | Q(code=building_code)).exists():
+                elif highschool_for_building_code(building_code):  # the command's ambient campus
                     highschool_status = 'exists'
                 else:
                     highschool_status = 'not_found'
