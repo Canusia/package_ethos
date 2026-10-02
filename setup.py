@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ethos',
-    version='2026.8.0',
+    version='2026.8.1',
     description='Ellucian Ethos SIS integration client for MyCE',
     author='Canusia',
     packages=find_packages(exclude=['tests*', 'ethos_sis.tests*']),
@@ -18,7 +18,7 @@ setup(
         'Django>=3.2',
         'requests>=2.31',
         'PyJWT>=2.0',
-        'myce_cis>=0.1.5a',
+        'myce_cis>=0.1.7a',
     ],
     extras_require={
         'cli': ['python-dotenv>=1.0'],
