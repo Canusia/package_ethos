@@ -46,8 +46,13 @@ def _status(campus, building):
 class CsvHighSchoolStatusTests(TestCase):
     def setUp(self):
         self.a, self.b = _campus(), _campus()
-        self.hs = HighSchool.objects.create(name='HS', code=f'H{uuid.uuid4().hex[:6]}',
-                                            sau=f'S{uuid.uuid4().hex[:6]}')
+        # Created in multi-campus mode outside any campus context, so cis does
+        # not auto-link it. On a single-campus tenant the auto-link goes to the
+        # deployment campus -- either of the two campuses above -- and then
+        # collides with the link each test makes for itself.
+        with override_settings(MULTI_CAMPUS=True):
+            self.hs = HighSchool.objects.create(name='HS', code=f'H{uuid.uuid4().hex[:6]}',
+                                                sau=f'S{uuid.uuid4().hex[:6]}')
 
     @override_settings(MULTI_CAMPUS=True)
     def test_multi_campus_matches_link_on_ambient_campus(self):
