@@ -15,15 +15,21 @@ the setting's history like an edit made on the settings page.
     python manage.py set_grade_push_guids --final-grade-type <guid> \\
         --grade A=<guid> --grade B=<guid> --dry-run
     python manage.py set_grade_push_guids --grade-map-file grades.json
+
+SIS GUIDS is one row per campus on a multi-campus deployment, so like the
+other Ethos commands this runs for one campus: pass ``--campus <code>`` there.
+A single-campus deployment needs no option.
 """
 import json
 import uuid
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 
-from cis.models.settings import Setting
+from cis.campus_context import current_campus, is_multi_campus
+from cis.models.settings import Setting, is_campus_scoped
 from cis.settings.sis_settings import sis_settings
 
+from ...command_base import EthosCommand
 from ...grade_push import config_errors
 
 
@@ -41,10 +47,11 @@ def _grade_pair(arg):
     return grade.strip(), _guid(guid, f'--grade {grade.strip()}')
 
 
-class Command(BaseCommand):
+class Command(EthosCommand):
     help = 'Set the final-grade push keys (final_grade_type, grade_map, grade_submitted_by) in SIS GUIDS.'
 
     def add_arguments(self, parser):
+        super().add_arguments(parser)  # --campus
         parser.add_argument('--final-grade-type', metavar='GUID',
                             help='Banner GUID of the FINAL grade type.')
         parser.add_argument('--grade', action='append', default=[], metavar='GRADE=GUID',
@@ -101,6 +108,8 @@ class Command(BaseCommand):
         value['guids'] = json.dumps(after, indent=2)
         if setting is None:
             setting = Setting(key=sis_settings.key)
+            if is_multi_campus() and is_campus_scoped(sis_settings.key):
+                setting.campus = current_campus()
         setting.value = value
         setting.save()
         self.stdout.write(self.style.SUCCESS('Saved SIS GUIDS.'))

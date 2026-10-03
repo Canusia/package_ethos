@@ -3,7 +3,7 @@ import json
 from io import StringIO
 
 from django.core.management import CommandError, call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from cis.models.settings import Setting
 from cis.settings.sis_settings import sis_settings
@@ -119,3 +119,36 @@ class SetGradePushGuidsTests(TestCase):
         f.close()
         self.addCleanup(__import__('os').unlink, f.name)
         return f.name
+
+
+@override_settings(MULTI_CAMPUS=True)
+class SetGradePushGuidsCampusTests(TestCase):
+    """SIS GUIDS is one row per campus on a multi-campus deployment, so the
+    command runs for one campus (--campus), like the other Ethos commands."""
+
+    def setUp(self):
+        from django.conf import settings
+        from cis.models.course import Campus
+
+        prefix = settings.CAMPUS_CODE_PREFIX
+        self.a = Campus.objects.create(name=f'{prefix} GA', code=f'{prefix}-sga')
+        self.b = Campus.objects.create(name=f'{prefix} GB', code=f'{prefix}-sgb')
+
+    def _row(self, campus):
+        return Setting.objects.get(key=sis_settings.key, campus=campus)
+
+    def test_requires_a_campus(self):
+        with self.assertRaises(CommandError):
+            _run('--final-grade-type', TYPE)
+
+    def test_writes_only_the_named_campus_row(self):
+        Setting.objects.create(key=sis_settings.key, campus=self.a,
+                               value={'guids': json.dumps({'academic_level': 'a'})})
+
+        _run('--campus', self.a.code, '--final-grade-type', TYPE)
+        _run('--campus', self.b.code, '--grade', f'A={GRADE_A}')
+
+        a = json.loads(self._row(self.a).value['guids'])
+        b = json.loads(self._row(self.b).value['guids'])
+        self.assertEqual(a, {'academic_level': 'a', 'final_grade_type': {'id': TYPE}})
+        self.assertEqual(b, {'grade_map': {'A': GRADE_A}})
