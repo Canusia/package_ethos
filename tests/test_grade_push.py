@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import jwt
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 try:
     from ethos.ethos import grade_push
@@ -43,8 +43,8 @@ class PushFinalGradeTests(TestCase):
         # Reset the module-level client cache so this test's mocked Ethos()
         # is what _get_client() actually returns, rather than a client
         # cached by some earlier test.
-        grade_push._client = None
-        self.addCleanup(setattr, grade_push, '_client', None)
+        grade_push._clients.clear()
+        self.addCleanup(grade_push._clients.clear)
 
         self.ethos = MagicMock()
         self.ethos._load_sis_guids.return_value = dict(GUIDS)
@@ -170,8 +170,8 @@ class ClientReuseTests(TestCase):
     registration."""
 
     def setUp(self):
-        grade_push._client = None
-        self.addCleanup(setattr, grade_push, '_client', None)
+        grade_push._clients.clear()
+        self.addCleanup(grade_push._clients.clear)
 
     @patch('ethos.ethos.library.base.requests.put')
     @patch('ethos.ethos.library.base.requests.post')
@@ -196,3 +196,66 @@ class ClientReuseTests(TestCase):
         self.assertTrue(second.success)
         self.assertEqual(mock_post.call_count, 1, 'auth should only happen once')
         self.assertEqual(mock_put.call_count, 2)
+
+
+class PushFinalGradeCampusTests(TestCase):
+    """The registration's course campus decides the Ethos client and the
+    campus-scoped settings (sis_guids) the push reads -- the same rule the
+    host's mirror_to_sis follows (package_ethos#4, ewu#85)."""
+
+    def setUp(self):
+        from django.conf import settings
+        from cis.models.course import Campus
+
+        grade_push._clients.clear()
+        self.addCleanup(grade_push._clients.clear)
+
+        prefix = settings.CAMPUS_CODE_PREFIX
+        self.a = Campus.objects.create(name=f'{prefix} A', code=f'{prefix}-gpa')
+        self.b = Campus.objects.create(name=f'{prefix} B', code=f'{prefix}-gpb')
+
+        self.seen = []  # (campus passed to Ethos(), ambient campus at submit)
+        patcher = patch.object(grade_push, 'Ethos', side_effect=self._client_for)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _client_for(self, campus=None):
+        from cis.campus_context import current_campus_or_none
+
+        client = MagicMock()
+        client._load_sis_guids.return_value = dict(GUIDS)
+        client.get_unverified_grades.return_value = []
+
+        def submit(*args, **kwargs):
+            self.seen.append((campus, current_campus_or_none()))
+            return True, _log()
+
+        client.submit_unverified_grade.side_effect = submit
+        return client
+
+    def _registration(self, campus):
+        return SimpleNamespace(
+            sis_id=REG_SIS,
+            class_section=SimpleNamespace(course=SimpleNamespace(campus=campus)))
+
+    @override_settings(MULTI_CAMPUS=True)
+    def test_multi_campus_uses_the_registrations_campus(self):
+        self.assertTrue(grade_push.push_final_grade(self._registration(self.b), 'A').success)
+
+        self.assertEqual(self.seen, [(self.b, self.b)])
+
+    @override_settings(MULTI_CAMPUS=True)
+    def test_multi_campus_keeps_one_client_per_campus(self):
+        for campus in (self.a, self.b, self.a):
+            grade_push.push_final_grade(self._registration(campus), 'A')
+
+        self.assertEqual(grade_push.Ethos.call_count, 2)
+        self.assertEqual([c for c, _ in self.seen], [self.a, self.b, self.a])
+
+    @override_settings(MULTI_CAMPUS=False)
+    def test_single_campus_shares_one_deployment_client(self):
+        for campus in (self.a, self.b, None):
+            grade_push.push_final_grade(self._registration(campus), 'A')
+
+        self.assertEqual(grade_push.Ethos.call_count, 1)
+        self.assertEqual(grade_push.Ethos.call_args.kwargs.get('campus'), None)

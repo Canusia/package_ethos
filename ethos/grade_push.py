@@ -19,18 +19,30 @@ from .library.grades import UnverifiedGradesLookupError
 
 AUTH_STATUS_CODES = (401, 403)
 
-_client = None
+# One Ethos client (and its auth-token cache) per campus, reused across calls
+# in this process/batch, so a run of many registrations authenticates once per
+# campus instead of once per row. Keyed by campus pk; None is the
+# deployment-wide client. Tests reset it with `grade_push._clients.clear()`.
+_clients = {}
 
 
-def _get_client():
-    """One Ethos client (and its auth-token cache) reused across calls in
-    this process/batch, so a run of many registrations authenticates once
-    instead of once per row. Tests reset this via `grade_push._client = None`.
+def _get_client(campus=None):
+    """The Ethos client for `campus`, or for the ambient campus when None.
+
+    Single-campus deployments always share the one deployment-wide client
+    (Ethos ignores the campus there). Multi-campus resolves the ambient campus
+    before keying, so a cached client is never reused for another college.
     """
-    global _client
-    if _client is None:
-        _client = Ethos()
-    return _client
+    from cis.campus_context import current_campus_or_none, is_multi_campus
+
+    if not is_multi_campus():
+        campus = None
+    elif campus is None:
+        campus = current_campus_or_none()
+    key = getattr(campus, 'pk', None)
+    if key not in _clients:
+        _clients[key] = Ethos(campus=campus)
+    return _clients[key]
 
 
 def config_errors(guids=None):
@@ -70,9 +82,33 @@ def _submission_error(log):
     return log.error_message or f'HTTP {log.response_status}'
 
 
+def _record_campus(registration):
+    """The campus that owns `registration`: its course's campus, or None."""
+    section = getattr(registration, 'class_section', None)
+    course = getattr(section, 'course', None)
+    return getattr(course, 'campus', None)
+
+
 def push_final_grade(registration, grade, existing_record_id=None):
-    """Create or update the Banner unverified FINAL grade for `registration`."""
-    ethos = _get_client()
+    """Create or update the Banner unverified FINAL grade for `registration`.
+
+    The record decides the campus, as in the host's mirror_to_sis: the push
+    runs inside the registration's course campus, so the Ethos credentials
+    and the campus-scoped sis_guids are that campus's, whatever the caller's
+    ambient campus. A campus-less course keeps the ambient campus
+    (single-campus: unchanged).
+    """
+    campus = _record_campus(registration)
+    if campus is None:
+        return _push_final_grade(registration, grade, existing_record_id, None)
+    from cis.campus_context import campus_context
+    with campus_context(campus):
+        return _push_final_grade(registration, grade, existing_record_id, campus)
+
+
+def _push_final_grade(registration, grade, existing_record_id, campus):
+    """push_final_grade's body, run under the registration's campus."""
+    ethos = _get_client(campus)
     guids = ethos._load_sis_guids()
 
     errors = config_errors(guids)
