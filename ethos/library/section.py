@@ -37,12 +37,27 @@ class SectionMixin(EthosBase):
             default='application/vnd.hedtech.integration.sections-maximum.v16+json',
         )
 
+        fallback = None
         if criteria is None:
             if 'maximum' in resolved_accept:
                 criteria = {'academicPeriod': {'detail': {'id': period_id}}}
+                # Some Banner instances (Lamar LSCPA) link sections to the term
+                # only through reportingAcademicPeriod; academicPeriod.detail
+                # then matches nothing.
+                fallback = {'reportingAcademicPeriod': {'id': period_id}}
             else:
                 criteria = {'academicPeriod': {'id': period_id}}
 
+        all_sections = self._fetch_sections(criteria, resolved_accept, term_code or period_id, **kwargs)
+        if not all_sections and fallback:
+            logger.info('No sections by academicPeriod.detail; retrying by reportingAcademicPeriod')
+            all_sections = self._fetch_sections(fallback, resolved_accept, term_code or period_id, **kwargs)
+
+        logger.info(f'Done. Total sections fetched: {len(all_sections)}')
+        return all_sections
+
+    def _fetch_sections(self, criteria, accept, label, **kwargs):
+        """Page through /api/sections for one criteria dict."""
         query = urlencode({'criteria': json.dumps(criteria)})
         base_url = f'{self.URL}/api/sections?{query}'
 
@@ -56,12 +71,12 @@ class SectionMixin(EthosBase):
 
             resp, sis_log = self._api_request(
                 'GET', url, 'sections',
-                headers={'Accept': resolved_accept},
+                headers={'Accept': accept},
                 **kwargs,
             )
 
             if not resp.ok:
-                logger.error(f'Failed to fetch sections for {term_code or period_id}: {resp.status_code} {resp.text}')
+                logger.error(f'Failed to fetch sections for {label}: {resp.status_code} {resp.text}')
                 break
 
             records = resp.json()
@@ -81,7 +96,6 @@ class SectionMixin(EthosBase):
 
             offset += len(records)
 
-        logger.info(f'Done. Total sections fetched: {len(all_sections)}')
         return all_sections
 
     def get_section(self, section_id, accept=None, **kwargs):
