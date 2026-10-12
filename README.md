@@ -174,6 +174,25 @@ only "Messages".
 | `ETHOS_CREDENTIALS` | Multi-campus: `{<campus code>: {'auth_code': …, 'url': …}}`, from `SECRETS['ethos']` |
 | `ETHOS_REQUEST_TIMEOUT` | Seconds before an Ethos call gives up (default `30`). Every call carries it; one call can pass `timeout=` to `_api_request`. A call that runs over raises `requests.Timeout` instead of hanging. |
 
+### SIS GUIDS keys read by the payload builders
+
+The person and admission builders read Banner GUIDs from the `guids` JSON in the cis
+"SIS GUIDS" setting (one row per campus on a multi-campus deployment). Each key may hold
+`"<guid>"` or `{"id": "<guid>"}`. **There are no defaults.** An unset key goes out as
+`null` (or is left out), so Banner rejects it visibly. The builders used to fall back to
+GUIDs from another college's Banner, which an unconfigured tenant would then send without
+any error.
+
+| Builder | Keys |
+|---|---|
+| `studentJSON` (person matching) | `phone_type`, `email_type`, `address_type` |
+| `studentPersonJSON` | `races`, `hispanic`, `non_hispanic`, `phone_type`, `home_phone_type`, `parent_phone_type`, `email_type`, `parent_email_type`, the citizenship-status keys |
+| `studentEmergencyContactJSON` | `emergency_contact_type` (GUID), `emergency_contact_relationship` (Banner relationship-type title, e.g. `Parent`); each is omitted when unset |
+| `studentAdmissionJSON` | `admission_population`, `student_type`, `residency_type`, `program`, `academic_level` |
+| `studentAdmissionDecisionJSON` | `decision_type` |
+
+Phone numbers are sent as digits only (`+1 (509) 555-1212` becomes `5095551212`).
+
 ---
 
 ## Multi-campus

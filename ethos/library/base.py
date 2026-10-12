@@ -87,6 +87,29 @@ class EthosBase:
         from cis.campus_context import campus_context
         return campus_context(self.campus)
 
+    @staticmethod
+    def _guid_setting(guids, key):
+        """The GUID stored under ``key`` in the guids blob, or None.
+
+        Accepts both shapes the blob uses, ``"<guid>"`` and ``{"id": "<guid>"}``. There
+        is deliberately no default: a missing key must reach Banner as null (rejected,
+        visible), never as a placeholder GUID from another college (package_ethos#3).
+        """
+        value = guids.get(key)
+        if isinstance(value, dict):
+            value = value.get('id')
+        return value or None
+
+    @staticmethod
+    def _phone_digits(value):
+        """'+1 (509) 555-1212' -> '5095551212'. Banner expects the bare digits; a US
+        country code is dropped so the number is ten digits."""
+        import re
+        digits = re.sub(r'\D', '', str(value or ''))
+        if len(digits) == 11 and digits.startswith('1'):
+            return digits[1:]
+        return digits
+
     def _load_sis_guids(self):
         """Load and parse SIS GUID mappings from this client's campus settings."""
         with self._settings_context():

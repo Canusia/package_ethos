@@ -100,21 +100,13 @@ class PersonMixin(EthosBase):
             "countryOfBirth": "USA",
             "races": races,
             "ethnicity": ethnicity,
-            "phones": [{
-                "type": {
-                    "phoneType": "mobile",
-                    "detail": {
-                        "id": guids.get('phone_type', "e6c932af-3784-4d94-a13b-6bb70b5b1312")
-                    }
-                },
-                "number": f"{student.user.primary_phone.replace('+1 ', '')}"
-            }],
+            "phones": [],
             "emails": [
                 {
                     "type": {
                         "emailType": "personal",
                         "detail": {
-                            "id": guids.get('email_type', "d97179ea-5b29-4679-836c-ddea2f98010e")
+                            "id": self._guid_setting(guids, 'email_type')
                         }
                     },
                     "address": f"{student.user.email}"
@@ -125,38 +117,32 @@ class PersonMixin(EthosBase):
         if student.citizenship_status and student.citizenship_status.lower() != 'unknown':
             json_body["citizenshipStatus"] =  {
                 "detail": {
-                    "id": guids.get(student.citizenship_status.lower())
+                    "id": self._guid_setting(guids, student.citizenship_status.lower())
                 }
             }
 
-        if student.user.secondary_phone:
-            json_body['phones'].append({
-                "type": {
-                    "phoneType": "home",
-                    "detail": {
-                        "id": guids.get('home_phone_type', "cc64f645-4edc-47f5-94cc-b870028254f8")
-                    }
-                },
-                "number": student.user.secondary_phone.replace('+1 ', '')
-            })
-
-        if student.parent_phone:
-            json_body['phones'].append({
-                "type": {
-                    "phoneType": "parent",
-                    "detail": {
-                        "id": guids.get('parent_phone_type', "a6e5e3a4-90bd-4a77-8e1e-daf2c369aaae")
-                    }
-                },
-                "number": student.parent_phone.replace('+1 ', '')
-            })
+        for phone_type, guid_key, number in (
+                ('mobile', 'phone_type', student.user.primary_phone),
+                ('home', 'home_phone_type', student.user.secondary_phone),
+                ('parent', 'parent_phone_type', student.parent_phone)):
+            digits = self._phone_digits(number)
+            if digits:
+                json_body['phones'].append({
+                    "type": {
+                        "phoneType": phone_type,
+                        "detail": {
+                            "id": self._guid_setting(guids, guid_key)
+                        }
+                    },
+                    "number": digits
+                })
 
         if student.parent_email:
             json_body["emails"].append({
                 "type": {
                     "emailType": "parent",
                     "detail": {
-                        "id": guids.get('parent_email_type', "8436bea7-e2f3-4493-8a33-beb969a0e0bb")
+                        "id": self._guid_setting(guids, 'parent_email_type')
                     }
                 },
                 "address": f"{student.parent_email}"
@@ -200,23 +186,25 @@ class PersonMixin(EthosBase):
             except Exception:
                 ...
 
-        json_body['phone'] = {
-            'type': {
-                'id': guids.get('phone_type', "e6c932af-3784-4d94-a13b-6bb70b5b1312")
-            },
-            'number': f"{student.user.primary_phone.replace('+1 ', '')}"
-        }
+        phone = self._phone_digits(student.user.primary_phone)
+        if phone:
+            json_body['phone'] = {
+                'type': {
+                    'id': self._guid_setting(guids, 'phone_type')
+                },
+                'number': phone
+            }
 
         json_body['email'] = {
             'type': {
-                'id': guids.get('email_type', "e6c932af-3784-4d94-a13b-6bb70b5b1312")
+                'id': self._guid_setting(guids, 'email_type')
             },
             'address': f"{student.user.email}"
         }
 
         json_body['address'] = {
             'type': {
-                'id': guids.get('address_type', "e6c932af-3784-4d94-a13b-6bb70b5b1312")
+                'id': self._guid_setting(guids, 'address_type')
             },
             'addressLines': [
                 f"{student.user.address1}"
@@ -236,8 +224,13 @@ class PersonMixin(EthosBase):
         return json.dumps(json_body)
 
     def studentEmergencyContactJSON(self, student):
-        """Build emergency contact JSON payload."""
-        from cis.utils import active_term
+        """Build emergency contact JSON payload.
+
+        The contact type is ``guids['emergency_contact_type']`` and the relationship
+        is ``guids['emergency_contact_relationship']``, which Banner matches on its
+        relationship-type title (e.g. "Parent"). Either one is left out when it is
+        not set. A hardcoded value would be another college's code.
+        """
         guids = self._load_sis_guids()
 
         json_body = {
@@ -251,23 +244,20 @@ class PersonMixin(EthosBase):
                     'firstName': student.parent_first_name,
                     'lastName': student.parent_last_name
                 },
-                "types": [
-                    {
-                        "id": "201b7a67-a74e-4dac-a457-2938b53f2992"
-                    }
-                ],
-                'relationship': {
-                    'type': 'Parents'
-                }
             }
         }
 
-        if student.parent_phone:
-            json_body['contact']['phones'] = [
-                    {
-                        'number': student.parent_phone.replace('+1 ', '')
-                    }
-                ]
+        contact_type = self._guid_setting(guids, 'emergency_contact_type')
+        if contact_type:
+            json_body['contact']['types'] = [{'id': contact_type}]
+
+        relationship = guids.get('emergency_contact_relationship')
+        if relationship:
+            json_body['contact']['relationship'] = {'type': relationship}
+
+        phone = self._phone_digits(student.parent_phone)
+        if phone:
+            json_body['contact']['phones'] = [{'number': phone}]
 
 
         return json.dumps(json_body)

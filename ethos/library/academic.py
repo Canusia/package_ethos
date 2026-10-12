@@ -22,13 +22,15 @@ class AcademicMixin(EthosBase):
         from cis.utils import active_term
         guids = self._load_sis_guids()
 
-        admission_population = guids.get('admission_population', "cf342721-190a-4f48-8b95-c2f9cd65725f")
+        # No defaults: an unset key goes out as null so Banner rejects it, rather than
+        # submitting the application against another college's curriculum (#3).
+        admission_population = self._guid_setting(guids, 'admission_population')
 
         academic_period = self.get_academic_period_id(active_term().code)
-        student_type = guids.get('student_type', {}).get('id', '904c5eb0-5b0f-4db8-ba7c-133a94f20a54')
-        residency_type = guids.get('residency_type', {}).get('id', 'a57dedba-4d00-4e2a-b453-9de372b17300')
-        program = guids.get('program', {}).get('id', '2cc795f1-d6c3-441f-bb0f-b6d2e1411ff4')
-        academic_level = guids.get('academic_level', {}).get('id', '8ae4bf82-85ce-444f-a9e4-43e65b53829a')
+        student_type = self._guid_setting(guids, 'student_type')
+        residency_type = self._guid_setting(guids, 'residency_type')
+        program = self._guid_setting(guids, 'program')
+        academic_level = self._guid_setting(guids, 'academic_level')
 
         json_body = {
             'id': '00000000-0000-0000-0000-000000000000',
@@ -36,23 +38,23 @@ class AcademicMixin(EthosBase):
                 'id': str(student.sis_id)
             },
             'admissionPopulation': {
-                'id': str(admission_population)
+                'id': admission_population
             },
             'academicPeriod': {
-                'id': str(academic_period)
+                'id': academic_period
             },
             'type': {
-                'id': str(student_type)
+                'id': student_type
             },
             'residencyType': {
-                'id': str(residency_type)
+                'id': residency_type
             },
             "applicationAcademicPrograms": [{
                "program": {
-                   "id": str(program)
+                   "id": program
                },
                "academicLevel": {
-                   "id": str(academic_level)
+                   "id": academic_level
                }
            }]
         }
@@ -63,7 +65,7 @@ class AcademicMixin(EthosBase):
         """Build admission decision JSON payload."""        
         guids = self._load_sis_guids()
 
-        decision_type = guids.get('decision_type', "83243414-b2d7-48a0-8ce4-7847103fc0e0")
+        decision_type = self._guid_setting(guids, 'decision_type')
 
         json_body = {
             'id': '00000000-0000-0000-0000-000000000000',
@@ -71,7 +73,7 @@ class AcademicMixin(EthosBase):
                 'id': str(student.admission_id)
             },
             'decisionType': {
-                'id': str(decision_type)
+                'id': decision_type
             },
             'decidedOn': datetime.datetime.now().strftime('%Y-%m-%d') + "T00:00:01.916Z"
         }
