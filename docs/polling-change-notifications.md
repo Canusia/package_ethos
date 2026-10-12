@@ -133,18 +133,36 @@ feed — the fixtures were captured from a different tenant.
 **Operator-tunable** — the five fields above, in the `ethos.settings.ethos_consume`
 Setting, editable from the web UI.
 
-**Deployment-level** — read from Django settings, fed by `SECRETS`:
+**Deployment-level** — read from Django settings:
 
 | Key | Default | Purpose |
 |---|---|---|
 | `ETHOS_CONSUME_RETENTION_DAYS` | `30` | Retention for stored notifications. |
 | `ETHOS_LOG_RETENTION_DAYS` | `90` | Retention for `EthosLog`. |
-| `ETHOS_CONSUME_AUTO` | `{}` | Per-resource opt-in for unattended consumption. |
+| `ETHOS_CONSUME_AUTO` | `{}` | Code allowlist: the resources that may consume unattended. |
 | `ETHOS_CONSUME_HANDLERS` | `{}` | `{resource_name: 'dotted.path.To.Handler'}`. |
 
 The split is deliberate: retention governs data destruction, and the auto-consume map
 plus handler registry decide what mutates student records. Neither belongs behind a web
 form a CE admin can edit.
+
+### Turning consuming on
+
+- **`ETHOS_CONSUME_AUTO` is a code allowlist.** Set it in the host's `settings.py`, next
+  to `ETHOS_CONSUME_HANDLERS`, never in `SECRETS`. Add a resource only once its handler
+  has been reviewed: it is the upper bound on what may change records unattended.
+- **"Consume After Polling" is the switch.** Staff turn processing on and off from the
+  Setting, with no deploy. The field's help text lists every handled resource and whether
+  the allowlist admits it, so "Yes" is never a guess.
+
+```python
+# settings.py (host)
+ETHOS_CONSUME_HANDLERS = {'section-registrations': 'myce_tenant_configs.services.ethos_consume.SectionRegistrationHandler'}
+ETHOS_CONSUME_AUTO = {'section-registrations': True}
+```
+
+Keeping the map in `SECRETS` makes enabling a resource a Secrets Manager edit plus a pod
+restart, which is worse than either a reviewed code change or the Setting.
 
 `consume/config.py` is the seam. The Setting wins when it holds a usable value; an
 out-of-range or non-numeric value counts as *unconfigured* and falls through to the
@@ -158,7 +176,7 @@ the poller.
 | `pending` | Stored, not yet dispatched. The poller only ever writes this. |
 | `consumed` | A handler applied it. `action` and `action_detail` say what happened. |
 | `failed` | A handler raised. `error` holds the traceback. **Never retried automatically** — re-run by hand from the detail page or with `--id`. |
-| `skipped` | No handler configured for that resource type. |
+| `skipped` | No handler configured for that resource type (`action = no_handler`), or the handler's plan said the notification does not apply to this tenant (`Plan(skip=True)`). |
 | `flagged` | A handler declined — e.g. an inbound record with no local counterpart. No writes were made. |
 
 Each message carries a **single** result, overwritten on re-run, not an attempt history.

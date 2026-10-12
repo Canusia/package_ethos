@@ -10,9 +10,10 @@ the release and letting the cron fire changes no behavior until someone
 deliberately turns polling on.
 
 Deployment-level configuration deliberately does NOT live here — the retention
-windows, the per-resource auto-consume map, and the handler registry stay in
-Django settings (fed from ``SECRETS``), because they are not things a CE admin
-should be able to change from a web form. See ``consume/config.py``.
+windows, the per-resource auto-consume allowlist, and the handler registry stay
+in Django settings, because they are not things a CE admin should be able to
+change from a web form. This form shows (read-only) which handled resources the
+allowlist admits. See ``consume/config.py``.
 
 Note on ``key``: it is a stable literal rather than ``str(__name__)``. This
 package runs under two different import roots — ``ethos.settings.ethos_consume``
@@ -24,6 +25,7 @@ between them.
 from django import forms
 from django.http import JsonResponse
 from django.urls import reverse_lazy
+from django.utils.html import format_html, format_html_join
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit
@@ -87,9 +89,9 @@ class SettingForm(forms.Form):
         choices=YES_NO,
         label='Consume After Polling',
         help_text='When Yes, the scheduled run also dispatches newly stored notifications to '
-                  'their handlers after storing them. Each resource type must ALSO be enabled '
-                  'in the deployment-level auto-consume map, so this alone does not start '
-                  'changing records.',
+                  'their handlers after storing them. Only resources that have a handler AND '
+                  'are in the ETHOS_CONSUME_AUTO allowlist (settings.py, a reviewed code change) '
+                  'are processed, so this alone does not start changing records.',
         widget=forms.Select(attrs={'class': 'col-md-4 col-sm-12'}))
 
     cron = forms.CharField(
@@ -113,6 +115,24 @@ class SettingForm(forms.Form):
         return {key: value for key, value in self.cleaned_data.items()}
 
 
+def _allowlist_summary():
+    """Which resources "Consume After Polling = Yes" would actually process.
+
+    Read-only and computed per render from the deployment's code config, so it is
+    never saved into the Setting (package_ethos#6).
+    """
+    from ..consume.config import handled_resources
+
+    resources = handled_resources()
+    if not resources:
+        return 'No handlers are configured (ETHOS_CONSUME_HANDLERS), so nothing will be processed.'
+    items = format_html_join(
+        ', ', '<code>{}</code> ({})',
+        ((name, 'processed' if allowed else 'not processed — not in ETHOS_CONSUME_AUTO')
+         for name, allowed in resources))
+    return format_html('Handled resources: {}.', items)
+
+
 class ethos_consume(SettingForm):
     key = 'ethos.settings.ethos_consume'
 
@@ -125,6 +145,8 @@ class ethos_consume(SettingForm):
         super().__init__(*args, **kwargs)
 
         self.request = request
+        self.fields['consume_after_poll'].help_text = format_html(
+            '{} {}', self.fields['consume_after_poll'].help_text, _allowlist_summary())
         self.helper = FormHelper()
         self.helper.attrs = {'target': '_blank'}
         self.helper.form_method = 'POST'

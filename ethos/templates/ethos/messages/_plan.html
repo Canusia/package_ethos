@@ -15,6 +15,10 @@
     <div class="alert alert-warning">
       <strong>Blocked:</strong> {{ plan.reason|default:plan.summary }}
     </div>
+  {% elif plan.skip %}
+    <div class="alert alert-secondary">
+      <strong>Not applicable — skipped:</strong> {{ plan.reason|default:plan.summary }}
+    </div>
   {% endif %}
   <dl class="row mb-2">
     <dt class="col-3">Action</dt><dd class="col-9"><code>{{ plan.action }}</code></dd>

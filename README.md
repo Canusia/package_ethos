@@ -274,7 +274,7 @@ Polling is configured at **Settings > Ethos Change Notifications**
 | Enable Polling | `No` | Master switch. While No, the scheduled job exits immediately without calling Ethos. |
 | Notifications per Request | `100` | Per `/consume` call, 1–1000. Ethos also caps the response at 1 MB, so fewer may return than requested. |
 | Batches per Run | `1` | Requests per scheduled run. Request size × batches is the ceiling one run can read — raise it if the queue grows faster than the schedule drains it. |
-| Consume After Polling | `No` | When Yes, a run also dispatches what it stored. Each resource must **also** be enabled in `ETHOS_CONSUME_AUTO`, so this alone changes nothing. |
+| Consume After Polling | `No` | The switch staff use. When Yes, a run also dispatches what it stored, for resources that have a handler **and** are in the `ETHOS_CONSUME_AUTO` code allowlist. The help text lists which handled resources the allowlist admits. |
 | Cron Expression | `0 * * * *` | Saving the setting upserts the `CronTab` row for `poll_ethos_messages`. |
 
 `register_settings` seeds the setting **and** the cron row, so enabling the
@@ -319,6 +319,12 @@ python manage.py purge_ethos_logs
 handler's `plan()` only — the same code path a real consume uses to decide
 what to do — so a dry run cannot diverge from what the real run would do.
 
+A handler whose notification is about something the tenant does not track
+(Colleague publishes every registration at the institution) returns
+`Plan(action=..., summary=..., skip=True, reason=...)`. The message is recorded
+as `skipped`, not `consumed`, and `apply()` is not called. `blocked=True` wins
+if both are set.
+
 ### Settings
 
 | Setting | Default | Meaning |
@@ -326,7 +332,7 @@ what to do — so a dry run cannot diverge from what the real run would do.
 | `ETHOS_CONSUME_LIMIT` | `100` | Notifications requested per `/consume` batch (Ethos allows 1-1000). |
 | `ETHOS_CONSUME_RETENTION_DAYS` | `30` | Age (by `received_on`) at which `purge_ethos_messages` deletes an `EthosMessage`. |
 | `ETHOS_LOG_RETENTION_DAYS` | `90` | Age (by `sent_on`) at which `purge_ethos_logs` deletes an `EthosLog`. |
-| `ETHOS_CONSUME_AUTO` | `{}` | `{resource_name: True}` — opts a resource into unattended consuming by `process_ethos_messages` when run without `--resource`/`--id`. Every resource is off by default. |
+| `ETHOS_CONSUME_AUTO` | `{}` | `{resource_name: True}` — the **code allowlist** of resources that may consume unattended (`process_ethos_messages` without `--resource`/`--id`). Set it in `settings.py` beside `ETHOS_CONSUME_HANDLERS`, never in `SECRETS`, and only for reviewed handlers; "Consume After Polling" is the on/off switch. Every resource is off by default. |
 | `ETHOS_CONSUME_HANDLERS` | `{}` | `{resource_name: 'dotted.path.To.Handler'}` — tenant-owned `ConsumeHandler` subclasses. A resource with no handler configured stores as `pending` forever and is skipped by `process_ethos_messages`. |
 
 ### UI

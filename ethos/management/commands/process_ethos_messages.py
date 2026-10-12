@@ -63,7 +63,7 @@ class Command(EthosCommand):
                 if plan is None:
                     self.stdout.write(f'#{message.queue_id} no handler')
                     continue
-                flag = ' [BLOCKED]' if plan.blocked else ''
+                flag = ' [BLOCKED]' if plan.blocked else ' [SKIP]' if plan.skip else ''
                 self.stdout.write(f'#{message.queue_id} {plan.action}{flag}: {plan.summary}')
                 for change in plan.changes:
                     self.stdout.write(f'    {change.field}: {change.old} -> {change.new}')

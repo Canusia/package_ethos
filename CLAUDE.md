@@ -200,10 +200,14 @@ both the row and the cron, with `is_active = No` — installing the release
 changes no behavior until someone switches it on.
 
 **Deployment-level** — `ETHOS_CONSUME_RETENTION_DAYS`, `ETHOS_LOG_RETENTION_DAYS`,
-`ETHOS_CONSUME_AUTO`, `ETHOS_CONSUME_HANDLERS`, read from Django settings
-(fed by `SECRETS`). These stay out of the web form deliberately: retention
-governs data destruction, and the auto-consume map plus handler registry decide
-what mutates student records.
+`ETHOS_CONSUME_AUTO`, `ETHOS_CONSUME_HANDLERS`, read from Django settings.
+These stay out of the web form deliberately: retention governs data
+destruction, and the auto-consume map plus handler registry decide what mutates
+student records. `ETHOS_CONSUME_AUTO` is a **code allowlist** set in
+`settings.py` (never SECRETS); "Consume After Polling" is the operator switch,
+and its help text lists which handled resources the allowlist admits (#6).
+A handler's `Plan(skip=True)` records the message as `skipped` without calling
+`apply()`.
 
 `consume/config.py` is the seam. The Setting wins when it holds a usable value;
 an out-of-range or non-numeric value counts as *unconfigured* and falls through

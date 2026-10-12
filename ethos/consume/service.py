@@ -68,6 +68,11 @@ def consume_message(message, dry_run=False, force=False):
                 detail=plan.reason or plan.summary, plan=plan)
         return plan
 
+    if plan.skip:
+        _record(message, EthosMessage.SKIPPED, action=plan.action,
+                detail=plan.reason or plan.summary, plan=plan)
+        return plan
+
     try:
         with transaction.atomic():
             result = handler.apply(message, plan)
@@ -85,7 +90,7 @@ def consume_message(message, dry_run=False, force=False):
         target_type=result.target_type or plan.target_type,
         target_pk=result.target_pk or plan.target_pk,
         target_label=result.target_label or plan.target_label,
-        blocked=plan.blocked, reason=plan.reason,
+        blocked=plan.blocked, reason=plan.reason, skip=plan.skip,
     )
     _record(message, EthosMessage.CONSUMED, action=result.action,
             detail=result.detail, plan=resolved)

@@ -35,6 +35,10 @@ class Plan:
     target_label: str = ''
     blocked: bool = False
     reason: str = ''
+    # "Not applicable": the notification is about something this tenant does not
+    # track (Colleague publishes every registration at the institution). Recorded
+    # as SKIPPED, apply() is never called. `blocked` wins if both are set.
+    skip: bool = False
 
 
 @dataclass
