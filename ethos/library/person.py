@@ -473,7 +473,20 @@ class PersonMixin(EthosBase):
         return (None, None, log)
 
     def get_or_create_person(self, student, **kwargs):
-        """Find or create a person record via person matching."""
+        """Find or create a person record via person matching.
+
+        Returns ``(request_id, person_guid, status, log)``.
+
+        **Every call creates a Banner prospect record.** Banner accepts POST
+        person-matching-requests only as
+        ``person-matching-requests-initiations-prospects.v1+json``, so this is not a
+        side-effect-free lookup. Do not retry it to diagnose a payload; check the
+        payload locally with ``validate_person_match`` instead.
+
+        The schema has no academic input. ``400 "Degree not found"`` on a payload that
+        holds only a name and date of birth comes from Banner's own prospect default
+        degree, not from the request. See ``docs/person-matching-requests.md``.
+        """
         url = self.URL + '/api/person-matching-requests'
 
         student_as_json = self.studentJSON(student)
