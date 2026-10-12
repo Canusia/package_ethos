@@ -443,6 +443,15 @@ class PersonMixin(EthosBase):
 
         return (None, log)
 
+    @staticmethod
+    def _matching_status(record):
+        """Status of the first outcome of a person-matching-requests record, or None.
+
+        Banner may answer 2xx with ``outcomes`` missing, null or ``[]``; the request id and
+        person GUID in the same response are still good, so this must not raise."""
+        outcomes = record.get('outcomes') or [{}]
+        return (outcomes[0] or {}).get('status')
+
     def get_request_status(self, request_id, **kwargs):
         """Check the status of a person matching request."""
         token = self.get_auth_token()
@@ -515,8 +524,8 @@ class PersonMixin(EthosBase):
 
             return (
                 record.get('id'),
-                record.get('person',{}).get('id'),
-                record.get('outcomes',[])[0].get('status'),
+                (record.get('person') or {}).get('id'),
+                self._matching_status(record),
                 sis_log
             )
 
