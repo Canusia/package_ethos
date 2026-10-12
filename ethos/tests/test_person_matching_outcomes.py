@@ -39,3 +39,50 @@ class GetOrCreatePersonOutcomesTests(SimpleTestCase):
         mock_api.return_value = (_ok({'id': 'req-1', 'person': {'id': 'p-1'},
                                       'outcomes': [{'status': 'matched'}]}), 'log')
         self.assertEqual(Ethos().get_or_create_person(object())[2], 'matched')
+
+
+@override_settings(MULTI_CAMPUS=False)
+@patch.object(Ethos, '_api_request')
+class GetRequestStatusTests(SimpleTestCase):
+    """package_ethos#8: no forced verbose, routed through _api_request, empty outcomes safe."""
+
+    @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
+    def test_routes_through_api_request_with_default_accept(self, _accept, mock_api):
+        mock_api.return_value = (_ok({'person': {'id': 'p-1'}, 'outcomes': [{'status': 'matched'}]}), 'log')
+
+        self.assertEqual(Ethos().get_request_status('req-1'), ('p-1', 'matched', 'log'))
+
+        args, kwargs = mock_api.call_args
+        self.assertEqual(args[0], 'GET')
+        self.assertTrue(args[1].endswith('/api/person-matching-requests/req-1'))
+        self.assertEqual(args[2], 'person_request_status')
+        self.assertTrue(kwargs.get('description'))
+        self.assertEqual(kwargs['headers']['Accept'], 'application/vnd.hedtech.integration.v1+json')
+
+    @patch.object(Ethos, 'get_preferred_accept_header', return_value='application/vnd.hedtech.integration.v2+json')
+    def test_uses_preferred_accept(self, accept, mock_api):
+        mock_api.return_value = (_ok({}), 'log')
+        Ethos().get_request_status('req-1')
+        accept.assert_called_with('person-matching-requests')
+        self.assertEqual(mock_api.call_args.kwargs['headers']['Accept'],
+                         'application/vnd.hedtech.integration.v2+json')
+
+    @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
+    def test_not_verbose_by_default(self, _accept, mock_api):
+        mock_api.return_value = (_ok({'person': {'id': 'p-1'}, 'outcomes': []}), 'log')
+        with patch('builtins.print') as mock_print:
+            Ethos().get_request_status('req-1')
+        mock_print.assert_not_called()
+        self.assertFalse(mock_api.call_args.kwargs.get('verbose', False))
+
+    @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
+    def test_empty_outcomes(self, _accept, mock_api):
+        mock_api.return_value = (_ok({'person': {'id': 'p-1'}, 'outcomes': []}), 'log')
+        self.assertEqual(Ethos().get_request_status('req-1'), ('p-1', None, 'log'))
+
+    @patch.object(Ethos, 'get_preferred_accept_header', return_value=None)
+    def test_not_ok(self, _accept, mock_api):
+        resp = MagicMock()
+        resp.ok = False
+        mock_api.return_value = (resp, 'log')
+        self.assertEqual(Ethos().get_request_status('req-1'), (None, None, 'log'))

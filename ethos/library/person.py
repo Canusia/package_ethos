@@ -453,45 +453,30 @@ class PersonMixin(EthosBase):
         return (outcomes[0] or {}).get('status')
 
     def get_request_status(self, request_id, **kwargs):
-        """Check the status of a person matching request."""
-        token = self.get_auth_token()
+        """Check the status of a person matching request.
 
+        Returns ``(person_guid, status, log)``. ``status`` is the first outcome's status, or
+        None when Banner returns no outcomes. After a ``reviewRequired`` match is resolved in
+        Banner the status may not change, so callers should let a returned person GUID win.
+        """
         url = self.URL + f'/api/person-matching-requests/{request_id}'
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/vnd.hedtech.integration.v1+json",
-            "Content-Type": "application/vnd.hedtech.integration.v1+json",
-        }
-
-        verbose = kwargs.get('verbose', False)
-        verbose=True
-        if verbose:
-            print(url)
-
-        resp = requests.get(url, headers=headers)
-        if verbose:
-            print(resp.status_code, resp.content)
-
-        log = self._log(
-            method='GET',
-            url=url,
-            message_type='person_request_status',
-            response_status=resp.status_code,
-            response_body=resp.text,
+        accept = self.get_preferred_accept_header('person-matching-requests') or 'application/vnd.hedtech.integration.v1+json'
+        resp, log = self._api_request(
+            'GET', url, 'person_request_status',
+            description=f'Person matching request status {request_id}',
+            headers={"Accept": accept},
+            **kwargs
         )
 
         if resp.ok:
             record = resp.json()
 
-            if verbose:
+            if kwargs.get('verbose', False):
                 print(record)
 
-            person_id = record.get('person', {}).get('id', None)
-            status = record.get('outcomes', [{}])[0].get('status', None)
-
             return (
-                person_id,
-                status,
+                (record.get('person') or {}).get('id'),
+                self._matching_status(record),
                 log
             )
 
