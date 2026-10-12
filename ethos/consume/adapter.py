@@ -8,6 +8,8 @@ capture time, because `payload` holds the notification verbatim.
 
 from django.utils.dateparse import parse_datetime
 
+from ..models import EthosMessage
+
 
 def _dt(value):
     """Parse an Ethos timestamp, tolerating both formats it emits.
@@ -19,6 +21,22 @@ def _dt(value):
     if not value:
         return None
     return parse_datetime(value)
+
+
+def _fit(fields):
+    """Truncate every string to its column's max_length.
+
+    One oversize envelope value (a long Colleague composite key, say) must not fail the
+    insert: the poller stores a batch atomically, so that would roll back the whole batch
+    and replay the same failing record on every poll (package_ethos#5). Nothing is lost —
+    `payload` keeps the notification verbatim.
+    """
+    for name, value in fields.items():
+        if isinstance(value, str):
+            max_length = EthosMessage._meta.get_field(name).max_length
+            if max_length and len(value) > max_length:
+                fields[name] = value[:max_length]
+    return fields
 
 
 def parse_notification(raw):
@@ -34,7 +52,7 @@ def parse_notification(raw):
     resource = raw.get('resource') or {}
     publisher = raw.get('publisher') or {}
 
-    return {
+    return _fit({
         'queue_id':         int(queue_id),
         'published_on':     _dt(raw.get('published')),
         'resource_name':    resource.get('name') or '',
@@ -47,4 +65,4 @@ def parse_notification(raw):
         'initiated_on':     _dt(raw.get('initiated')),
         'publisher_id':     publisher.get('id') or '',
         'payload':          raw,
-    }
+    })

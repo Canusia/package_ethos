@@ -166,7 +166,7 @@ class EthosMessage(models.Model):
     operation        = models.CharField(max_length=20, db_index=True)
     content_type     = models.CharField(max_length=50, blank=True)
     message_type     = models.CharField(max_length=50, blank=True)
-    sis_message_id   = models.CharField(max_length=50, blank=True)    # optional `messageId`
+    sis_message_id   = models.TextField(blank=True)                   # optional `messageId`; Colleague sends 290+ chars
     initiated_on     = models.DateTimeField(null=True, blank=True)    # optional `initiated`
     publisher_id     = models.CharField(max_length=64, blank=True)
     payload          = models.JSONField(default=dict)                 # the whole notification, verbatim

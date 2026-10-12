@@ -165,6 +165,8 @@ Migrations live at `ethos/ethos/migrations/`. App label is `ethos` in both dev a
 | `0003_resource_preferred_representation.py` | preferred_representation FK on EthosResource |
 | `0004_ethosconsumecursor_ethosmessage.py` | EthosMessage, EthosConsumeCursor |
 | `0005_menu_ethos_messages.py` | Data migration — adds the "Messages" sub-item to the CE sidebar's SIS nav group in the `cis.settings.menu` Setting. Depends on `('cis', '__first__')`. Idempotent, reversible, no-ops when the Setting row or the `ethos` group is absent. |
+| `0006_campus.py` | `campus` FK on cursor, message, log and application (multi-campus, #4) |
+| `0007_ethosmessage_sis_message_id_text.py` | `EthosMessage.sis_message_id` becomes a `TextField` — Colleague `messageId`s run to 290+ chars (#5) |
 
 ### EthosMessage / EthosConsumeCursor
 
@@ -174,7 +176,10 @@ Migrations live at `ethos/ethos/migrations/`. App label is `ethos` in both dev a
 `resource_version`, `operation`, `content_type`, `message_type`,
 `sis_message_id`, `initiated_on`, `publisher_id`) are extracted by
 `consume/adapter.py`; `payload` holds the notification verbatim so nothing is
-lost even if extraction is wrong. `status` is one of `pending`, `consumed`,
+lost even if extraction is wrong. The adapter truncates each extracted string
+to its column's `max_length`: the poller stores a batch atomically, so one
+oversize value would otherwise roll back the batch and wedge polling on the
+same record forever (#5). `status` is one of `pending`, `consumed`,
 `failed`, `skipped`, `flagged`. `queue_id` is intentionally **not**
 `unique=True` at the DB layer — see "Queue-id monotonicity" below.
 
