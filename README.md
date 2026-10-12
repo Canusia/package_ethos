@@ -266,7 +266,17 @@ python manage.py import_terms_from_ethos <year_code>
 python manage.py import_courses_from_ethos <term_code>
 python manage.py import_sections_from_ethos <term_code> --create
 python manage.py sync_ethos_resources
+
+# SIS GUIDS and person matching (docs/person-matching-requests.md)
+python manage.py populate_sis_guids --dry-run          # fill SIS GUIDS from the code tables; keeps hand-set keys
+python manage.py populate_sis_guids --overwrite --only phone_type,email_type
+python manage.py validate_person_match <student id>    # check the match payload; sends nothing
 ```
+
+Commands that build or check a payload use the tenant's client when
+`<TENANT_SERVICES_APP>/services/ethos_client.py` defines a no-argument `get_client()`
+(for a tenant that overrides builders, e.g. SCCC's `SCCCEthos`). Otherwise they use the
+packaged `Ethos`. See `ethos/client.py`.
 
 ## Change Notifications
 

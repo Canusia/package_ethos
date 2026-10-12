@@ -31,6 +31,8 @@ ethos/                           ← git submodule root (outer package)
     │   ├── poller.py             # poll() — drains /consume into EthosMessage, advances EthosConsumeCursor atomically
     │   └── service.py            # consume_message() — dispatches one stored EthosMessage to its handler
     ├── tasks.py                 # django-tasks background task: import_sections_for_term
+    ├── client.py                # get_client() — the tenant's Ethos subclass (services/ethos_client.get_client) or Ethos()
+    ├── reference.py             # Code-table reads + SIS GUIDS map for populate_sis_guids (via _api_request)
     ├── grade_push.py            # push_final_grade / config_errors — Banner unverified FINAL grade for the grades SIS push
     ├── urls.py                  # All ethos URL patterns (app_name='ethos')
     ├── library/                 # All Ethos API client code
@@ -292,6 +294,8 @@ docker exec django_web_ewu python /app/webapp/manage.py db_worker
 | `poll_ethos_messages` | Store notifications off `/consume` into `EthosMessage`; never consumes (unless "Consume After Polling" is on, when it chains to `process_ethos_messages`). This is the command the `CronTab` row runs. Gated on the `is_active` setting — `--force` for a one-off while off; `--peek` (HEAD, no side effects) works while off too. Also `--limit`, `--max-batches`, `--from-id` (replay), `-t/--time` (supplied by `cron_jobs`; triggers the CronLog signals) |
 | `process_ethos_messages` | Dispatch stored `EthosMessage` rows to their configured handler; never polls. `--dry-run` (plan only, writes nothing), `--resource`, `--id`, `--force`, `--limit` |
 | `purge_ethos_messages` | Delete `EthosMessage` rows past `ETHOS_CONSUME_RETENTION_DAYS` (default 30). `--dry-run`, `--days` |
+| `populate_sis_guids` | Fill the SIS GUIDS blob from the Ethos code tables (races, ethnicities, phone/email/address/emergency-contact types) via `reference.build_guid_map`. Keeps keys that already hold a value unless `--overwrite`; refuses a corrupt blob. `--dry-run`, `--only`, `--campus` |
+| `validate_person_match <student id>` | Applies Banner's person-matching validation rules to `studentJSON` locally and reports every failure; sends nothing. `--offline`, `--show-payload`, `--campus` |
 | `purge_ethos_logs` | Delete `EthosLog` rows past `ETHOS_LOG_RETENTION_DAYS` (default 90). `--dry-run`, `--days`. **Not scheduled** — nothing purged `EthosLog` before this command existed; the `cis` hourly cron's `purge_sis_logs`/`purge_sis_messages` only touch the legacy `SIS_Log`/`SIS_Subscription` models. |
 
 ## Change-Notification Consume Framework
