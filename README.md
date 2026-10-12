@@ -172,6 +172,7 @@ only "Messages".
 |---|---|
 | `COLLEAGUE_AUTH_CODE` | Ethos API auth code from Secrets Manager (single-campus) |
 | `ETHOS_CREDENTIALS` | Multi-campus: `{<campus code>: {'auth_code': …, 'url': …}}`, from `SECRETS['ethos']` |
+| `ETHOS_REQUEST_TIMEOUT` | Seconds before an Ethos call gives up (default `30`). Every call carries it; one call can pass `timeout=` to `_api_request`. A call that runs over raises `requests.Timeout` instead of hanging. |
 
 ---
 

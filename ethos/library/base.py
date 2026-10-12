@@ -24,6 +24,18 @@ class EthosBase:
     URL = 'https://integrate.elluciancloud.com'
     AUTH_CODE = getattr(settings, 'COLLEAGUE_AUTH_CODE', '')
 
+    #: Seconds before an Ethos call gives up. Without one, a call that never answers
+    #: blocks the process indefinitely (package_ethos#3). Override per deployment with
+    #: ``settings.ETHOS_REQUEST_TIMEOUT`` or per call with ``timeout=``.
+    DEFAULT_TIMEOUT = 30
+
+    @staticmethod
+    def request_timeout(timeout=None):
+        if timeout is not None:
+            return timeout
+        from django.conf import settings as django_settings
+        return getattr(django_settings, 'ETHOS_REQUEST_TIMEOUT', EthosBase.DEFAULT_TIMEOUT)
+
     def __init__(self, campus=None):
         """Client for ``campus``. Single-campus deployments are always campus-less
         (``self.campus`` is None -- deployment-wide), ignoring any explicit or ambient
@@ -54,7 +66,7 @@ class EthosBase:
         headers = {"Authorization": f"Bearer {self.AUTH_CODE}"}
         url = f'{self.URL}/auth'
 
-        resp = requests.post(url, headers=headers)
+        resp = requests.post(url, headers=headers, timeout=self.request_timeout())
         if resp.ok:
             token = resp.text
             payload = jwt.decode(token, options={"verify_signature": False})
@@ -150,8 +162,13 @@ class EthosBase:
         log.save()
         return log
 
-    def _api_request(self, method, url, message_type, description='', data=None, json_data=None, headers=None, **kwargs):
-        """Make an authenticated API request and log it to EthosLog."""
+    def _api_request(self, method, url, message_type, description='', data=None, json_data=None, headers=None, timeout=None, **kwargs):
+        """Make an authenticated API request and log it to EthosLog.
+
+        ``timeout`` (seconds) defaults to ``request_timeout()``; a call that runs over
+        raises ``requests.Timeout`` rather than hanging.
+        """
+        timeout = self.request_timeout(timeout)
         token = self.get_auth_token()
         req_headers = {"Authorization": f"Bearer {token}"}
         if headers:
@@ -162,15 +179,15 @@ class EthosBase:
             print(url)
 
         if method == 'GET':
-            resp = requests.get(url, headers=req_headers)
+            resp = requests.get(url, headers=req_headers, timeout=timeout)
         elif method == 'POST':
-            resp = requests.post(url, headers=req_headers, data=data, json=json_data)
+            resp = requests.post(url, headers=req_headers, data=data, json=json_data, timeout=timeout)
         elif method == 'PUT':
-            resp = requests.put(url, headers=req_headers, data=data, json=json_data)
+            resp = requests.put(url, headers=req_headers, data=data, json=json_data, timeout=timeout)
         elif method == 'HEAD':
-            resp = requests.head(url, headers=req_headers)
+            resp = requests.head(url, headers=req_headers, timeout=timeout)
         elif method == 'DELETE':
-            resp = requests.delete(url, headers=req_headers)
+            resp = requests.delete(url, headers=req_headers, timeout=timeout)
         else:
             raise ValueError(f'Unsupported HTTP method: {method}')
 

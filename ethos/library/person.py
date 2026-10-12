@@ -421,7 +421,7 @@ class PersonMixin(EthosBase):
             }
 
             student_as_json = json.dumps(student_as_json)
-            resp = requests.put(url, headers=headers, data=student_as_json)
+            resp = requests.put(url, headers=headers, data=student_as_json, timeout=self.request_timeout())
 
             if verbose:
                 print(resp.status_code, resp.content)

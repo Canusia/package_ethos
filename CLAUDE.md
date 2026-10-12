@@ -125,7 +125,7 @@ else:
 
 ## Architecture
 
-- **EthosBase** (`base.py`) provides JWT auth (cached with 30s buffer), `_api_request()` helper that logs all calls to `EthosLog`, `get_preferred_accept_header(resource_name)` for DB-driven Accept header selection, and GUID config loading from `sis_settings`.
+- **EthosBase** (`base.py`) provides JWT auth (cached with 30s buffer), `_api_request()` helper that logs all calls to `EthosLog` (every call, including the direct `requests` calls in `registration.py`, `person.py`, `academic.py` and the auth POST, carries `timeout=self.request_timeout()`: `ETHOS_REQUEST_TIMEOUT`, default 30s; new code must too), `get_preferred_accept_header(resource_name)` for DB-driven Accept header selection, and GUID config loading from `sis_settings`.
 - **Mixins** inherit from `EthosBase` and are composed into the `Ethos` class via multiple inheritance (MRO). 15 mixins total, 44 methods exposed in the API Explorer.
 - **EthosLog** records every API call with method, URL, request headers/body, response status/body. Never stores the Authorization token. Exposes `response_json` (parsed `response_body` as dict, `{}` on parse failure) and `error_message` (best-effort short error string for failed calls) for callers that need structured response data — e.g. reading the new section-registration GUID from `mirror_registration` via `log.response_json.get('id')`.
 - **EthosResource / EthosRepresentation** cache the available API resources from `/admin/available-resources`. Each resource can have a `preferred_representation` FK that overrides the hardcoded Accept header at call time.

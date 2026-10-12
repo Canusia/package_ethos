@@ -189,7 +189,7 @@ class RegistrationMixin(EthosBase):
             'Content-Type': 'application/vnd.hedtech.integration.v16+json'
         }
 
-        resp = requests.put(url, headers=headers, json=json_data)
+        resp = requests.put(url, headers=headers, json=json_data, timeout=self.request_timeout())
 
         log = self._log(
             method='PUT',
@@ -244,7 +244,7 @@ class RegistrationMixin(EthosBase):
             "statusDate": datetime.datetime.now().strftime("%Y-%m-%d")
         }
 
-        resp = requests.put(url, headers=headers, json=json_data)
+        resp = requests.put(url, headers=headers, json=json_data, timeout=self.request_timeout())
 
         log = self._log(
             method='PUT',
@@ -281,7 +281,7 @@ class RegistrationMixin(EthosBase):
             ],
         }
 
-        resp = requests.post(url, headers=headers, json=json_data)
+        resp = requests.post(url, headers=headers, json=json_data, timeout=self.request_timeout())
 
         log = self._log(
             method='POST',
@@ -354,7 +354,7 @@ class RegistrationMixin(EthosBase):
             "statusDate": datetime.datetime.now().strftime("%Y-%m-%d"),
         }
 
-        resp = requests.post(url, headers=headers, json=json_body)
+        resp = requests.post(url, headers=headers, json=json_body, timeout=self.request_timeout())
 
         log = self._log(
             method='POST',
@@ -407,7 +407,7 @@ class RegistrationMixin(EthosBase):
             "statusDate": datetime.datetime.now().strftime("%Y-%m-%d"),
         }
 
-        resp = requests.post(url, headers=headers, json=json_body)
+        resp = requests.post(url, headers=headers, json=json_body, timeout=self.request_timeout())
 
         log = self._log(
             method='POST',

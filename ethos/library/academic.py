@@ -133,7 +133,7 @@ class AcademicMixin(EthosBase):
 
         headers = {"Authorization": f"Bearer {token}"}
 
-        resp = requests.get(url, headers=headers)
+        resp = requests.get(url, headers=headers, timeout=self.request_timeout())
 
         if resp.ok:
             acad_periods = resp.json()
