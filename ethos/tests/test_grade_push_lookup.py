@@ -2,6 +2,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import requests
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.auth.signals import user_logged_in
@@ -94,6 +95,30 @@ class LookupServiceTests(TestCase):
         with self.assertRaises(lk.BannerLookupError):
             lk.lookup(_client(routes), REG)
 
+    def test_timeout_raises_lookup_error_status_0(self):
+        client = MagicMock(URL='https://ethos')
+        client._api_request.side_effect = requests.Timeout('timed out')
+        with self.assertRaises(lk.BannerLookupError) as ctx:
+            lk.lookup(client, REG)
+        self.assertEqual(ctx.exception.status, 0)
+        self.assertIn('timed out', str(ctx.exception))
+        self.assertNotIn('HTTP 0', str(ctx.exception))
+
+    def test_non_json_200_raises_lookup_error(self):
+        client = MagicMock(URL='https://ethos')
+        resp = _resp(200, None)
+        resp.json.side_effect = ValueError('no json')
+        client._api_request.return_value = (resp, MagicMock(pk=7))
+        with self.assertRaises(lk.BannerLookupError):
+            lk.grade_options(client, REG)
+
+    def test_wrong_shape_raises_lookup_error(self):
+        with self.assertRaises(lk.BannerLookupError):
+            lk.grade_options(_client({f'section-registrations/{REG}': (200, [])}), REG)
+        routes = dict(OK_ROUTES, **{'section-instructors': (200, {})})
+        with self.assertRaises(lk.BannerLookupError):
+            lk.lookup(_client(routes), REG)
+
 
 class LookupViewTests(TestCase):
     @classmethod
@@ -142,3 +167,21 @@ class LookupViewTests(TestCase):
         resp = self._get(self.ce, client=None, error='Ethos is not configured for this campus.')
         self.assertEqual(resp.status_code, 400)
         self.assertIn('not configured', resp.json()['error'])
+
+    def test_timeout_is_502(self):
+        client = MagicMock(URL='https://ethos')
+        client._api_request.side_effect = requests.Timeout('timed out')
+        resp = self._get(self.ce, client=client)
+        self.assertEqual(resp.status_code, 502)
+        self.assertIn('timed out', resp.json()['error'])
+
+    def test_unexpected_error_is_502(self):
+        with patch.object(view_mod, 'lookup', side_effect=RuntimeError('boom')), \
+                self.assertLogs(view_mod.logger, 'ERROR'):
+            resp = self._get(self.ce, client=_client(OK_ROUTES))
+        self.assertEqual(resp.status_code, 502)
+
+    def test_missing_registration_param_is_400(self):
+        self.client.force_login(self.ce)
+        with patch.object(view_mod, 'ethos_client_or_error', return_value=(_client(OK_ROUTES), None)):
+            self.assertEqual(self.client.get(self.url).status_code, 400)

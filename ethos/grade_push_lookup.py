@@ -6,33 +6,53 @@ ignores the scheme filter), its section (for the instructors offered as
 submitted-by) and the scheme's name.
 """
 import json
+import logging
 from urllib.parse import urlencode
 
 from .grade_push import _grade_scale
 from .grade_push_config import load
+
+logger = logging.getLogger(__name__)
 
 GRADE_OPTIONS_ACCEPT = (
     'application/vnd.hedtech.integration.section-registrations-grade-options.v1+json')
 
 
 class BannerLookupError(Exception):
-    def __init__(self, status, log=None, what=''):
+    def __init__(self, status=0, log=None, what='', detail=''):
         self.status = status
         self.log = log
-        super().__init__(f'Banner {what} look-up failed (HTTP {status}).')
+        msg = f'Banner {what} look-up failed'
+        if status:
+            msg += f' (HTTP {status})'
+        if detail:
+            msg += f': {detail}'
+        super().__init__(msg + '.')
 
 
-def _get(client, path, message_type, accept='application/json'):
-    resp, log = client._api_request(
-        'GET', f'{client.URL}/api/{path}', message_type, headers={'Accept': accept})
+def _get(client, path, message_type, expect, accept='application/json'):
+    """GET a Banner JSON body of type `expect` (dict or list), or raise BannerLookupError."""
+    what = message_type.replace('grade_push_', '').replace('_', ' ')
+    try:
+        resp, log = client._api_request(
+            'GET', f'{client.URL}/api/{path}', message_type, headers={'Accept': accept})
+    except Exception as exc:
+        logger.warning('Banner %s look-up failed: %r', what, exc)
+        raise BannerLookupError(0, None, what, str(exc) or type(exc).__name__) from exc
     if not resp.ok:
-        raise BannerLookupError(resp.status_code, log, message_type.replace('_', ' '))
-    return resp.json()
+        raise BannerLookupError(resp.status_code, log, what)
+    try:
+        body = resp.json()
+    except ValueError as exc:
+        raise BannerLookupError(resp.status_code, log, what, 'response was not valid JSON') from exc
+    if not isinstance(body, expect):
+        raise BannerLookupError(resp.status_code, log, what, 'unexpected response shape')
+    return body
 
 
 def grade_options(client, registration_id):
     data = _get(client, f'section-registrations/{registration_id}',
-                'grade_push_grade_options', GRADE_OPTIONS_ACCEPT)
+                'grade_push_grade_options', dict, GRADE_OPTIONS_ACCEPT)
     scheme = data.get('studentGradeScheme') or {}
     return {
         'section': (data.get('section') or {}).get('id') or '',
@@ -60,11 +80,11 @@ def _person_name(client, person_id):
 
 def lookup(client, registration_id):
     options = grade_options(client, registration_id)
-    types = _get(client, 'section-grade-types', 'grade_push_grade_types')
+    types = _get(client, 'section-grade-types', 'grade_push_grade_types', list)
     instructors = []
     if options['section']:
         query = urlencode({'criteria': json.dumps({'section': {'id': options['section']}})})
-        for row in _get(client, f'section-instructors?{query}', 'grade_push_instructors'):
+        for row in _get(client, f'section-instructors?{query}', 'grade_push_instructors', list):
             person = (row.get('instructor') or {}).get('id')
             if person:
                 instructors.append({'id': person, 'name': _person_name(client, person),

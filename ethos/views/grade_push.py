@@ -1,4 +1,6 @@
 """JSON look-up for the Banner Grade Push setting's Look up button."""
+import logging
+
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 
@@ -8,6 +10,8 @@ from ..grade_push import _log_url
 from ..grade_push_config import GradePushConfigError, normalise_guid
 from ..grade_push_lookup import BannerLookupError, lookup
 from ._client import ethos_client_or_error
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -29,3 +33,7 @@ def grade_push_lookup(request):
                              'log_url': _log_url(exc.log)}, status=502)
     except GradePushConfigError as exc:
         return JsonResponse({'error': str(exc)}, status=400)
+    except Exception:
+        logger.exception('Unexpected error during Banner grade-push look-up')
+        return JsonResponse({'error': 'Banner look-up failed unexpectedly. See the server log.'},
+                            status=502)
