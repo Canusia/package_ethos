@@ -17,6 +17,7 @@ from types import SimpleNamespace
 
 from django.urls import NoReverseMatch, reverse
 
+from .grade_push_config import guid_of
 from .library.ethos import Ethos
 from .library.grades import UnverifiedGradesLookupError
 
@@ -66,12 +67,12 @@ def _grade_scale():
 def required_errors(guids):
     """Problems that stop every push: Banner rejects the request without these."""
     errors = []
-    if not (guids.get('final_grade_type') or {}).get('id'):
+    if not guid_of(guids.get('final_grade_type')):
         errors.append('sis_guids.final_grade_type.id is not set.')
     grade_map = guids.get('grade_map')
     if not isinstance(grade_map, dict) or not grade_map:
         errors.append('sis_guids.grade_map is empty.')
-    if not (guids.get('grade_submitted_by') or {}).get('id'):
+    if not guid_of(guids.get('grade_submitted_by')):
         errors.append('sis_guids.grade_submitted_by.id is not set (Banner requires submittedBy).')
     return errors
 
@@ -159,7 +160,7 @@ def _push_final_grade(registration, grade, existing_record_id, campus):
         return _result(False, error=(
             f"Grade '{key}' has no Banner mapping in sis_guids.grade_map."))
 
-    submitted_by = (guids.get('grade_submitted_by') or {}).get('id') or None
+    submitted_by = guid_of(guids.get('grade_submitted_by')) or None
     section_registration_id = str(registration.sis_id)
 
     record_id = existing_record_id
@@ -177,7 +178,7 @@ def _push_final_grade(registration, grade, existing_record_id, campus):
             record_id = existing[0].get('id')
 
     success, log = ethos.submit_unverified_grade(
-        section_registration_id, grade_id, guids['final_grade_type']['id'],
+        section_registration_id, grade_id, guid_of(guids.get('final_grade_type')),
         submitted_by_id=submitted_by, record_id=record_id)
 
     if not success:

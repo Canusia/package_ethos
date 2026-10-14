@@ -12,6 +12,8 @@ from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.auth.signals import user_logged_in
+from unittest.mock import patch
+
 from django.test import TestCase
 from django.urls import reverse
 
@@ -177,6 +179,29 @@ class SettingsRedirectTests(TestCase):
         self.client.force_login(user)
         resp = self.client.get(reverse('ethos:ethos_settings'))
         self.assertRedirects(resp, reverse('cis:settings_overview', args=['ethos']),
+                             fetch_redirect_response=False)
+
+    def _ce_login(self):
+        Group.objects.get_or_create(name='ce')
+        user = get_user_model().objects.create_user(
+            username='es_ce2', email='es_ce2@example.com', password='x')
+        user.groups.add(Group.objects.get(name='ce'))
+        self.client.force_login(user)
+
+    def test_profile_present_redirects_to_the_overview(self):
+        from ..views import settings_page
+        self._ce_login()
+        with patch.object(settings_page, 'profile_exists', return_value=True):
+            resp = self.client.get(reverse('ethos:ethos_settings'))
+        self.assertRedirects(resp, reverse('cis:settings_overview', args=['ethos']),
+                             fetch_redirect_response=False)
+
+    def test_profile_absent_redirects_to_the_status_page(self):
+        from ..views import settings_page
+        self._ce_login()
+        with patch.object(settings_page, 'profile_exists', return_value=False):
+            resp = self.client.get(reverse('ethos:ethos_settings'))
+        self.assertRedirects(resp, reverse('ethos:ethos_status'),
                              fetch_redirect_response=False)
 
     def test_non_ce_user_is_turned_away(self):

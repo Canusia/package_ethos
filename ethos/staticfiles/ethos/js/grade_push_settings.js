@@ -23,14 +23,23 @@
   function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
 
   function fillType(types, current) {
+    $type.nextAll('.gp-type').remove();
+    if (!types.length) {
+      // Nothing to choose from: keep the plain field so the saved value survives.
+      $type.show();
+      return ' Banner returned no grade types; enter the Final Grade Type GUID by hand.';
+    }
+    var has = function (id) { return types.some(function (t) { return t.id === id; }); };
+    var final = types.filter(function (t) { return t.code === 'FINAL'; })[0];
+    var pick = (current && has(current)) ? current : (final ? final.id : types[0].id);
     var $sel = $('<select class="form-control"></select>');
     types.forEach(function (t) {
-      $sel.append($('<option>').val(t.id).text(t.code + ' — ' + t.title));
+      $sel.append($('<option>').val(t.id).text(t.code + ' \u2014 ' + t.title));
     });
-    var pick = current || (types.filter(function (t) { return t.code === 'FINAL'; })[0] || {}).id;
-    if (pick) { $sel.val(pick); }
-    $type.val($sel.val()).hide().nextAll('.gp-type').remove();
+    $sel.val(pick);
+    $type.val(pick).hide();
     $sel.addClass('gp-type').insertAfter($type).on('change', function () { $type.val(this.value); });
+    return '';
   }
 
   function fillMap(scale, options, current) {
@@ -81,7 +90,7 @@
         var current = readMap();
         var optionIds = data.grade_options.map(function (o) { return o.id; });
         var foreign = Object.keys(current).filter(function (k) { return optionIds.indexOf(current[k]) === -1; });
-        fillType(data.grade_types, data.current.final_grade_type);
+        var typeNote = fillType(data.grade_types, data.current.final_grade_type);
         fillMap(data.scale, data.grade_options, current);
         fillInstructors(data.instructors);
         var msg = 'Grade scheme: ' + esc(data.scheme.title || data.scheme.id);
@@ -90,6 +99,7 @@
           msg += '. The saved map has grades that are not options of this registration ('
             + esc(foreign.join(', ')) + '); they were re-matched by letter.';
         }
+        if (typeNote) { $status.addClass('text-warning'); msg += '.' + esc(typeNote); }
         $status.html(msg);
       })
       .fail(function (xhr) {

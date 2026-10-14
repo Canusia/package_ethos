@@ -96,6 +96,26 @@ class FormTests(TestCase):
         self.assertFalse(Setting.objects.filter(key=sis_settings.key).exists())
 
 
+class GradeLetterTests(TestCase):
+    def setUp(self):
+        _store({})
+
+    def test_rejects_markup_in_a_letter(self):
+        form = _form(_data(grade_map=json.dumps({'<b>A</b>': A})))
+        self.assertFalse(form.is_valid())
+        self.assertIn('grade_map', form.errors)
+        self.assertIn('letters, digits', form.errors['grade_map'][0])
+
+    def test_rejects_overlong_letter(self):
+        self.assertFalse(_form(_data(grade_map=json.dumps({'A' * 11: A}))).is_valid())
+
+    def test_accepts_real_grade_letters(self):
+        letters = ['A-', 'B+', 'P', 'NC', 'S/U']
+        form = _form(_data(grade_map=json.dumps({letter: A for letter in letters})))
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(sorted(form.cleaned_data['grade_map']), sorted(letters))
+
+
 class SampleRegistrationCheckTests(TestCase):
     def _clean_with(self, options=None, error=None, client=True):
         fake = MagicMock() if client else None

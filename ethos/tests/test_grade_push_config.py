@@ -1,7 +1,7 @@
 """grade_push_config: the shared load/apply used by the command and the setting form."""
 import json
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from cis.models.settings import Setting
 from cis.settings.sis_settings import sis_settings
@@ -32,6 +32,12 @@ class LoadTests(TestCase):
 
     def test_unset_and_missing_row_are_blank(self):
         self.assertEqual(cfg.load(), {'final_grade_type': '', 'grade_map': {},
+                                      'grade_submitted_by': ''})
+
+    def test_non_dict_values_are_blank_not_an_error(self):
+        _store(json.dumps({'final_grade_type': TYPE, 'grade_submitted_by': PERSON,
+                           'grade_map': {'A': GRADE_A}}))
+        self.assertEqual(cfg.load(), {'final_grade_type': '', 'grade_map': {'A': GRADE_A},
                                       'grade_submitted_by': ''})
 
     def test_corrupt_blob_raises(self):
@@ -91,3 +97,30 @@ class ApplyTests(TestCase):
         self.assertEqual(cfg.normalise_guid(' ' + TYPE.upper() + ' '), TYPE)
         with self.assertRaises(ValueError):
             cfg.normalise_guid('nope')
+
+
+@override_settings(MULTI_CAMPUS=True)
+class ApplyCampusCreateTests(TestCase):
+    """Creating the SIS GUIDS row on a multi-campus deployment stamps the served campus."""
+
+    def setUp(self):
+        from django.conf import settings
+        from cis.models.course import Campus
+
+        prefix = settings.CAMPUS_CODE_PREFIX
+        self.a = Campus.objects.create(name=f'{prefix} CA', code=f'{prefix}-gca')
+        self.b = Campus.objects.create(name=f'{prefix} CB', code=f'{prefix}-gcb')
+
+    def test_apply_creates_the_row_for_the_current_campus_only(self):
+        from cis.campus_context import campus_context
+
+        Setting.objects.create(key=sis_settings.key, campus=self.b,
+                               value={'guids': json.dumps({'academic_level': 'b'})})
+
+        with campus_context(self.a):
+            cfg.apply(final_grade_type=TYPE)
+
+        row_a = Setting.objects.get(key=sis_settings.key, campus=self.a)
+        self.assertEqual(json.loads(row_a.value['guids']), {'final_grade_type': {'id': TYPE}})
+        row_b = Setting.objects.get(key=sis_settings.key, campus=self.b)
+        self.assertEqual(json.loads(row_b.value['guids']), {'academic_level': 'b'})

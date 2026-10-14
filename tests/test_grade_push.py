@@ -160,8 +160,17 @@ class PushFinalGradeTests(TestCase):
         self.assertIn('authentic', result.error.lower())
 
     def test_config_errors_lists_each_problem(self):
-        self.assertEqual(len(grade_push.config_errors({})), 3)
-        self.assertEqual(grade_push.config_errors(GUIDS), [])
+        with patch.object(grade_push, '_grade_scale', return_value=[]):
+            self.assertEqual(len(grade_push.config_errors({})), 3)
+            self.assertEqual(grade_push.config_errors(GUIDS), [])
+
+    def test_required_errors_tolerates_non_dict_values(self):
+        guids = {'final_grade_type': 'abc', 'grade_map': {'A': 'x'},
+                 'grade_submitted_by': 'def'}
+        errors = grade_push.required_errors(guids)
+        self.assertEqual(len(errors), 2)
+        self.assertIn('final_grade_type', errors[0])
+        self.assertIn('grade_submitted_by', errors[1])
 
     def test_config_errors_reports_unmapped_scale_letters(self):
         with patch.object(grade_push, '_grade_scale', return_value=['A', 'P', 'B']):

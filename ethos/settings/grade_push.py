@@ -11,6 +11,7 @@ A sample section registration drives the Look up button (see
 check that every mapped grade is one of that registration's grade options.
 """
 import json
+import re
 
 from django import forms
 from django.http import JsonResponse
@@ -26,6 +27,9 @@ from ..grade_push import unmapped_grades
 from ..grade_push_config import GradePushConfigError, apply, load, normalise_guid
 from ..grade_push_lookup import BannerLookupError, grade_options
 from ..views._client import ethos_client_or_error
+
+
+_LETTER_RE = re.compile(r'^[A-Za-z0-9+\-/.*]{1,10}$')
 
 
 def _guid_field(label, help_text, required=True):
@@ -98,6 +102,9 @@ class grade_push(forms.Form):
             letter = str(letter).strip()
             if not letter:
                 raise forms.ValidationError('Grade Map has a blank grade.')
+            if not _LETTER_RE.match(letter):
+                raise forms.ValidationError(
+                    f'Grade {letter!r}: use letters, digits and + - / . * only (max 10).')
             try:
                 out[letter] = normalise_guid(guid)
             except ValueError:

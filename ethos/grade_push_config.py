@@ -46,6 +46,11 @@ def _parse_blob(raw):
     return blob
 
 
+def guid_of(value):
+    """The GUID of an ``{"id": guid}`` blob value; '' for anything else (hand-edited blobs)."""
+    return (value.get('id') or '') if isinstance(value, dict) else ''
+
+
 def _row():
     return Setting.objects.filter(key=sis_settings.key).first()
 
@@ -56,9 +61,9 @@ def load():
     blob = _parse_blob((setting.value or {}).get('guids') if setting else None)
     grade_map = blob.get('grade_map')
     return {
-        'final_grade_type': (blob.get('final_grade_type') or {}).get('id') or '',
+        'final_grade_type': guid_of(blob.get('final_grade_type')),
         'grade_map': dict(grade_map) if isinstance(grade_map, dict) else {},
-        'grade_submitted_by': (blob.get('grade_submitted_by') or {}).get('id') or '',
+        'grade_submitted_by': guid_of(blob.get('grade_submitted_by')),
     }
 
 
