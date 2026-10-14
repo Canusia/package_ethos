@@ -21,6 +21,16 @@ _GRADE_PUSH_CONFIGURATOR = {
     'categories': ['3'],
 }
 
+# Report manifest for register_reports; 'app' is added per config, as above.
+_GRADE_COMPARISON_REPORT = {
+    'name': 'banner_grade_comparison',
+    'title': 'Banner vs MyCE Grades',
+    'description': 'Grade and registration status of each registration in Banner and in MyCE, '
+                   'for one or more terms. Reads Banner class by class.',
+    'categories': ['Classes'],
+    'available_for': ['ce'],
+}
+
 
 class EthosConfig(AppConfig):
     """Production — pip-installed package."""
@@ -32,6 +42,8 @@ class EthosConfig(AppConfig):
         {'app': 'ethos', **_GRADE_PUSH_CONFIGURATOR},
     ]
 
+    REPORTS = [{'app': 'ethos', **_GRADE_COMPARISON_REPORT}]
+
 
 class DevEthosConfig(AppConfig):
     """Development — git submodule."""
@@ -42,3 +54,5 @@ class DevEthosConfig(AppConfig):
         {'app': 'ethos.ethos', **_CONSUME_CONFIGURATOR},
         {'app': 'ethos.ethos', **_GRADE_PUSH_CONFIGURATOR},
     ]
+
+    REPORTS = [{'app': 'ethos.ethos', **_GRADE_COMPARISON_REPORT}]
