@@ -10,6 +10,15 @@
   var $type = $form.find('[name=final_grade_type]');
   var $map = $form.find('[name=grade_map]');
   var $by = $form.find('[name=grade_submitted_by]');
+  var $source = $form.find('[name=submitted_by_source]');
+  var $byGroup = $by.closest('.form-group');
+
+  // The GUID is used only for "This Banner person".
+  function toggleBy() {
+    $byGroup.toggle($source.filter(':checked').val() === 'person');
+  }
+  $source.on('change', toggleBy);
+  toggleBy();
   var url = $root.data('lookup-url');
 
   var $btn = $('<button type="button" class="btn btn-sm btn-outline-primary mt-1">Look up</button>');
@@ -71,16 +80,20 @@
   }
 
   function fillInstructors(instructors) {
-    $by.nextAll('.gp-by').remove();
+    $form.find('.gp-by').remove();
     if (!instructors.length) { return; }
-    var $wrap = $('<div class="gp-by mt-1 small">Section instructors: </div>');
+    var $wrap = $('<div class="gp-by mt-1 small">Section instructors (click to use as a fixed person): </div>');
     instructors.forEach(function (i) {
       $('<button type="button" class="btn btn-link btn-sm p-0 mr-2"></button>')
         .text(i.name + (i.role ? ' (' + i.role + ')' : ''))
-        .on('click', function () { $by.val(i.id); })
+        .on('click', function () {
+          $by.val(i.id);
+          $source.filter('[value=person]').prop('checked', true);
+          toggleBy();
+        })
         .appendTo($wrap);
     });
-    $wrap.insertAfter($by);
+    $wrap.insertAfter($source.last().closest('.form-group'));
   }
 
   $btn.on('click', function () {

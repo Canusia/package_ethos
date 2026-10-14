@@ -30,7 +30,8 @@ def _form(data):
 
 def _data(**over):
     data = {'sample_registration': '', 'final_grade_type': TYPE,
-            'grade_map': json.dumps({'A': A}), 'grade_submitted_by': PERSON}
+            'grade_map': json.dumps({'A': A}), 'submitted_by_source': 'person',
+            'grade_submitted_by': PERSON}
     data.update(over)
     return data
 
@@ -49,7 +50,40 @@ class FormTests(TestCase):
         self.assertEqual(values['final_grade_type'], TYPE)
         self.assertEqual(json.loads(values['grade_map']), {'A': A})
         self.assertEqual(values['grade_submitted_by'], PERSON)
+        self.assertEqual(values['submitted_by_source'], 'person')
         self.assertEqual(values['sample_registration'], '')
+
+    def test_unset_submitter_shows_not_set_but_form_starts_on_instructor(self):
+        values = gp.grade_push.from_db()
+        self.assertEqual(values['submitted_by_source'], '')
+        with patch.object(gp, 'unmapped_grades', return_value=[]):
+            self.assertIn('Not set', gp.grade_push.overview_render(values)['submitted_by_source'])
+        form = gp.grade_push(RequestFactory().get('/x?report_id=1'), initial=values)
+        self.assertEqual(form.initial['submitted_by_source'], 'primary_instructor')
+        self.assertEqual(values['submitted_by_source'], '')  # caller's dict untouched
+
+    def test_from_db_reads_primary_instructor(self):
+        _store({'grade_submitted_by': {'source': 'primary_instructor'}})
+        values = gp.grade_push.from_db()
+        self.assertEqual(values['submitted_by_source'], 'primary_instructor')
+        self.assertEqual(values['grade_submitted_by'], '')
+
+    def test_primary_instructor_needs_no_guid_and_is_saved(self):
+        form = _form(_data(submitted_by_source='primary_instructor', grade_submitted_by=''))
+        self.assertTrue(form.is_valid(), form.errors)
+        form.run_record()
+        blob = json.loads(Setting.objects.get(key=sis_settings.key).value['guids'])
+        self.assertEqual(blob['grade_submitted_by'], {'source': 'primary_instructor'})
+
+    def test_primary_instructor_ignores_a_leftover_guid(self):
+        form = _form(_data(submitted_by_source='primary_instructor'))
+        self.assertTrue(form.is_valid(), form.errors)
+        form.run_record()
+        blob = json.loads(Setting.objects.get(key=sis_settings.key).value['guids'])
+        self.assertEqual(blob['grade_submitted_by'], {'source': 'primary_instructor'})
+
+    def test_submitted_by_source_is_required(self):
+        self.assertIn('submitted_by_source', _form(_data(submitted_by_source='')).errors)
 
     def test_from_db_on_corrupt_blob_is_blank_not_error(self):
         Setting.objects.filter(key=sis_settings.key).update(value={'guids': '{bad'})
@@ -159,6 +193,23 @@ class OverviewRenderTests(TestCase):
         self.assertNotIn('<b>A</b>', out['grade_map'])
         self.assertIn('P', out['grade_map'])
         self.assertIn('Not set', out['grade_submitted_by'])
+
+    def test_renders_primary_instructor(self):
+        values = {'final_grade_type': TYPE, 'grade_submitted_by': '',
+                  'submitted_by_source': 'primary_instructor',
+                  'grade_map': json.dumps({'A': A}), 'sample_registration': ''}
+        with patch.object(gp, 'unmapped_grades', return_value=[]):
+            out = gp.grade_push.overview_render(values)
+        self.assertEqual(out['grade_submitted_by'], "Section's primary instructor")
+        self.assertEqual(out['submitted_by_source'], "Section's primary instructor")
+
+    def test_renders_fixed_person_guid_under_submitted_by(self):
+        values = {'final_grade_type': TYPE, 'grade_submitted_by': PERSON,
+                  'submitted_by_source': 'person',
+                  'grade_map': json.dumps({'A': A}), 'sample_registration': ''}
+        with patch.object(gp, 'unmapped_grades', return_value=[]):
+            out = gp.grade_push.overview_render(values)
+        self.assertEqual(out['submitted_by_source'], PERSON)
 
     def test_registered_in_both_configurators(self):
         for config in (ethos_apps.EthosConfig, ethos_apps.DevEthosConfig):

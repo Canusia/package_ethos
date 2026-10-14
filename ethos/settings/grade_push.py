@@ -24,12 +24,18 @@ from crispy_forms.layout import HTML, Layout, Submit
 from cis.settings.sis_settings import sis_settings
 
 from ..grade_push import unmapped_grades
-from ..grade_push_config import GradePushConfigError, apply, load, normalise_guid
+from ..grade_push_config import (
+    PRIMARY_INSTRUCTOR, GradePushConfigError, apply, load, normalise_guid)
 from ..grade_push_lookup import BannerLookupError, grade_options
 from ..views._client import ethos_client_or_error
 
 
 _LETTER_RE = re.compile(r'^[A-Za-z0-9+\-/.*]{1,10}$')
+PERSON = 'person'
+SUBMITTED_BY_CHOICES = (
+    (PRIMARY_INSTRUCTOR, "Section's primary instructor"),
+    (PERSON, 'This Banner person'),
+)
 
 
 def _guid_field(label, help_text, required=True):
@@ -51,12 +57,21 @@ class grade_push(forms.Form):
     grade_map = forms.CharField(
         label='Grade Map', widget=forms.Textarea(attrs={'rows': 6}),
         help_text='JSON object of MyCE grade → Banner grade GUID. Look up shows one dropdown per grade.')
+    submitted_by_source = forms.ChoiceField(
+        label='Submitted By', choices=SUBMITTED_BY_CHOICES, initial=PRIMARY_INSTRUCTOR,
+        widget=forms.RadioSelect,
+        help_text='Banner rejects grades without submittedBy. The primary instructor is '
+                  "looked up in Banner for each grade's section when it is sent.")
     grade_submitted_by = _guid_field(
-        'Submitted By', 'Banner person GUID sent as submittedBy. Banner rejects grades without it.')
+        'Banner Person GUID', 'Sent as submittedBy when "This Banner person" is chosen.',
+        required=False)
 
     def __init__(self, request, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.request = request
+        if not self.initial.get('submitted_by_source'):
+            # A copy: the settings overview passes its own values dict as initial.
+            self.initial = dict(self.initial, submitted_by_source=PRIMARY_INSTRUCTOR)
         self.helper = FormHelper()
         self.helper.form_method = 'POST'
         self.helper.form_action = reverse_lazy(
@@ -88,7 +103,8 @@ class grade_push(forms.Form):
         return self._guid('final_grade_type')
 
     def clean_grade_submitted_by(self):
-        return self._guid('grade_submitted_by')
+        required = self.data.get('submitted_by_source') == PERSON
+        return self._guid('grade_submitted_by', required=required)
 
     def clean_grade_map(self):
         try:
@@ -141,19 +157,31 @@ class grade_push(forms.Form):
         try:
             current = load()
         except GradePushConfigError:
-            current = {'final_grade_type': '', 'grade_map': {}, 'grade_submitted_by': ''}
+            current = {'final_grade_type': '', 'grade_map': {}, 'grade_submitted_by': '',
+                       'submitted_by_primary_instructor': False}
+        # '' when nothing is saved, so the overview says "Not set"; the form
+        # itself then starts on the primary instructor (see __init__).
+        if current['submitted_by_primary_instructor']:
+            source = PRIMARY_INSTRUCTOR
+        elif current['grade_submitted_by']:
+            source = PERSON
+        else:
+            source = ''
         return {
             'sample_registration': '',
             'final_grade_type': current['final_grade_type'],
             'grade_map': json.dumps(current['grade_map'], indent=2) if current['grade_map'] else '',
+            'submitted_by_source': source,
             'grade_submitted_by': current['grade_submitted_by'],
         }
 
     def run_record(self):
         try:
+            person = self.cleaned_data['submitted_by_source'] == PERSON
             apply(final_grade_type=self.cleaned_data['final_grade_type'],
                   grade_map=self.cleaned_data['grade_map'], replace_grade_map=True,
-                  submitted_by=self.cleaned_data['grade_submitted_by'])
+                  submitted_by=self.cleaned_data['grade_submitted_by'] if person else None,
+                  submitted_by_primary_instructor=not person)
         except GradePushConfigError as exc:
             return JsonResponse({'status': 'error', 'message': str(exc)}, status=400)
         return JsonResponse({'message': 'Successfully saved settings', 'status': 'success'})
@@ -179,9 +207,15 @@ class grade_push(forms.Form):
         if missing:
             table = format_html('{}<div class="text-danger small">No mapping for: {}</div>',
                                 table, ', '.join(missing))
+        if values.get('submitted_by_source') == PRIMARY_INSTRUCTOR:
+            submitted_by = "Section's primary instructor"
+        else:
+            submitted_by = values.get('grade_submitted_by') \
+                or 'Not set — Banner rejects grades without it'
         return {
             'final_grade_type': values.get('final_grade_type') or 'Not set',
             'grade_map': table,
-            'grade_submitted_by': values.get('grade_submitted_by')
-            or 'Not set — Banner rejects grades without it',
+            # The overview lists submitted_by_source; it shows the whole answer.
+            'submitted_by_source': submitted_by,
+            'grade_submitted_by': submitted_by,
         }

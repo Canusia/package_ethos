@@ -82,7 +82,8 @@ class LookupServiceTests(TestCase):
             {'id': PRIMARY, 'name': 'Brock C Anderson', 'role': 'primary'},
             {'id': OTHER, 'name': OTHER, 'role': ''}])
         self.assertEqual(got['scale'], ['A', 'B'])
-        self.assertEqual(set(got['current']), {'final_grade_type', 'grade_map', 'grade_submitted_by'})
+        self.assertEqual(set(got['current']), {'final_grade_type', 'grade_map', 'grade_submitted_by',
+                                              'submitted_by_primary_instructor'})
 
     def test_banner_failure_raises_with_status(self):
         client = _client({f'section-registrations/{REG}': (404, {})})
@@ -118,6 +119,42 @@ class LookupServiceTests(TestCase):
         routes = dict(OK_ROUTES, **{'section-instructors': (200, {})})
         with self.assertRaises(lk.BannerLookupError):
             lk.lookup(_client(routes), REG)
+
+
+class PrimaryInstructorTests(TestCase):
+    """The submitter when submittedBy is the section's primary instructor."""
+
+    def test_returns_the_primary_instructor(self):
+        self.assertEqual(lk.primary_instructor(_client(OK_ROUTES), REG), PRIMARY)
+
+    def test_role_match_ignores_case(self):
+        rows = [{'instructor': {'id': PRIMARY}, 'instructorRole': 'Primary'}]
+        routes = dict(OK_ROUTES, **{'section-instructors': (200, rows)})
+        self.assertEqual(lk.primary_instructor(_client(routes), REG), PRIMARY)
+
+    def test_no_primary_raises(self):
+        rows = [{'instructor': {'id': OTHER}, 'instructorRole': 'secondary'}]
+        routes = dict(OK_ROUTES, **{'section-instructors': (200, rows)})
+        with self.assertRaisesRegex(lk.SubmitterError, 'no primary instructor'):
+            lk.primary_instructor(_client(routes), REG)
+
+    def test_two_primaries_raise(self):
+        rows = [{'instructor': {'id': PRIMARY}, 'instructorRole': 'primary'},
+                {'instructor': {'id': OTHER}, 'instructorRole': 'primary'}]
+        routes = dict(OK_ROUTES, **{'section-instructors': (200, rows)})
+        with self.assertRaisesRegex(lk.SubmitterError, '2 primary instructors'):
+            lk.primary_instructor(_client(routes), REG)
+
+    def test_no_section_raises(self):
+        routes = dict(OK_ROUTES, **{f'section-registrations/{REG}': (200, dict(OPTIONS, section={}))})
+        with self.assertRaisesRegex(lk.SubmitterError, 'no section'):
+            lk.primary_instructor(_client(routes), REG)
+
+    def test_banner_failure_raises_lookup_error(self):
+        routes = dict(OK_ROUTES, **{'section-instructors': (503, {})})
+        with self.assertRaises(lk.BannerLookupError) as ctx:
+            lk.primary_instructor(_client(routes), REG)
+        self.assertEqual(ctx.exception.status, 503)
 
 
 class LookupViewTests(TestCase):

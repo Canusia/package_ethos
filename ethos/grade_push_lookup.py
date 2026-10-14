@@ -3,7 +3,8 @@
 A sample section registration gives the exact grade options of its grade
 scheme (``grade-schemes`` is 403 for EWU's key and ``grade-definitions``
 ignores the scheme filter), its section (for the instructors offered as
-submitted-by) and the scheme's name.
+submitted-by) and the scheme's name. ``primary_instructor`` is also used at
+push time when submittedBy is the section's primary instructor.
 """
 import json
 import logging
@@ -28,6 +29,10 @@ class BannerLookupError(Exception):
         if detail:
             msg += f': {detail}'
         super().__init__(msg + '.')
+
+
+class SubmitterError(Exception):
+    """Banner does not name exactly one primary instructor to submit the grade."""
 
 
 def _get(client, path, message_type, expect, accept='application/json'):
@@ -78,17 +83,42 @@ def _person_name(client, person_id):
     return preferred.get('fullName') or person_id
 
 
+def section_instructors(client, section_id):
+    """The section's instructors as [{'id': person guid, 'role': instructorRole}]."""
+    query = urlencode({'criteria': json.dumps({'section': {'id': section_id}})})
+    rows = _get(client, f'section-instructors?{query}', 'grade_push_instructors', list)
+    return [{'id': (row.get('instructor') or {}).get('id'), 'role': row.get('instructorRole') or ''}
+            for row in rows if isinstance(row, dict) and (row.get('instructor') or {}).get('id')]
+
+
+def primary_instructor(client, registration_id):
+    """The Banner person GUID of the primary instructor of the registration's section.
+
+    Raises SubmitterError unless Banner lists exactly one primary instructor
+    (a wrong submitter on a grade is worse than a visible failure), and
+    BannerLookupError when a Banner call fails.
+    """
+    section = grade_options(client, registration_id)['section']
+    if not section:
+        raise SubmitterError('Banner returned no section for this registration.')
+    primaries = [i['id'] for i in section_instructors(client, section)
+                 if i['role'].lower() == 'primary']
+    if not primaries:
+        raise SubmitterError('Section has no primary instructor in Banner.')
+    if len(primaries) > 1:
+        raise SubmitterError(
+            f'Section has {len(primaries)} primary instructors in Banner; expected one.')
+    return primaries[0]
+
+
 def lookup(client, registration_id):
     options = grade_options(client, registration_id)
     types = _get(client, 'section-grade-types', 'grade_push_grade_types', list)
     instructors = []
     if options['section']:
-        query = urlencode({'criteria': json.dumps({'section': {'id': options['section']}})})
-        for row in _get(client, f'section-instructors?{query}', 'grade_push_instructors', list):
-            person = (row.get('instructor') or {}).get('id')
-            if person:
-                instructors.append({'id': person, 'name': _person_name(client, person),
-                                    'role': row.get('instructorRole') or ''})
+        for row in section_instructors(client, options['section']):
+            instructors.append({'id': row['id'], 'name': _person_name(client, row['id']),
+                                'role': row['role']})
     return {
         'registration': registration_id,
         'section': options['section'],

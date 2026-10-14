@@ -28,17 +28,26 @@ class LoadTests(TestCase):
         _store(json.dumps({'final_grade_type': {'id': TYPE}, 'grade_map': {'A': GRADE_A},
                            'grade_submitted_by': {'id': PERSON}, 'academic_level': 'x'}))
         self.assertEqual(cfg.load(), {'final_grade_type': TYPE, 'grade_map': {'A': GRADE_A},
-                                      'grade_submitted_by': PERSON})
+                                      'grade_submitted_by': PERSON,
+                                      'submitted_by_primary_instructor': False})
+
+    def test_primary_instructor_source(self):
+        _store(json.dumps({'grade_submitted_by': {'source': 'primary_instructor'}}))
+        got = cfg.load()
+        self.assertEqual(got['grade_submitted_by'], '')
+        self.assertTrue(got['submitted_by_primary_instructor'])
 
     def test_unset_and_missing_row_are_blank(self):
         self.assertEqual(cfg.load(), {'final_grade_type': '', 'grade_map': {},
-                                      'grade_submitted_by': ''})
+                                      'grade_submitted_by': '',
+                                      'submitted_by_primary_instructor': False})
 
     def test_non_dict_values_are_blank_not_an_error(self):
         _store(json.dumps({'final_grade_type': TYPE, 'grade_submitted_by': PERSON,
                            'grade_map': {'A': GRADE_A}}))
         self.assertEqual(cfg.load(), {'final_grade_type': '', 'grade_map': {'A': GRADE_A},
-                                      'grade_submitted_by': ''})
+                                      'grade_submitted_by': '',
+                                      'submitted_by_primary_instructor': False})
 
     def test_corrupt_blob_raises(self):
         _store('{not json')
@@ -70,6 +79,13 @@ class ApplyTests(TestCase):
         cfg.apply(submitted_by=PERSON)
         cfg.apply(clear_submitted_by=True)
         self.assertNotIn('grade_submitted_by', _blob())
+
+    def test_primary_instructor_replaces_a_fixed_person_and_back(self):
+        cfg.apply(submitted_by=PERSON)
+        cfg.apply(submitted_by_primary_instructor=True)
+        self.assertEqual(_blob()['grade_submitted_by'], {'source': 'primary_instructor'})
+        cfg.apply(submitted_by=PERSON)
+        self.assertEqual(_blob()['grade_submitted_by'], {'id': PERSON})
 
     def test_dry_run_writes_nothing(self):
         _, after = cfg.apply(final_grade_type=TYPE, dry_run=True)

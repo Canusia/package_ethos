@@ -5,7 +5,9 @@ The grade push (``grade_push.push_final_grade``) reads three keys from the
 
     final_grade_type    {"id": guid}            required
     grade_map           {"<MyCE grade>": guid}  required
-    grade_submitted_by  {"id": guid}            required by Banner
+    grade_submitted_by  {"id": guid}            required by Banner: a fixed person,
+                        or {"source": "primary_instructor"} for each section's
+                        primary instructor (looked up in Banner per push)
 
 The blob is shared with every other Ethos lookup, so this command edits only
 those three keys and leaves the rest of the blob, and any other field on the
@@ -59,6 +61,8 @@ class Command(EthosCommand):
         who = parser.add_mutually_exclusive_group()
         who.add_argument('--submitted-by', metavar='GUID',
                          help='Banner person GUID sent as submittedBy.')
+        who.add_argument('--submitted-by-primary-instructor', action='store_true',
+                         help="Send each section's primary instructor (from Banner) as submittedBy.")
         who.add_argument('--clear-submitted-by', action='store_true',
                          help='Remove grade_submitted_by, so submittedBy is omitted.')
         parser.add_argument('--dry-run', action='store_true',
@@ -77,6 +81,7 @@ class Command(EthosCommand):
             changes['grade_submitted_by'] = {
                 'id': _guid(options['submitted_by'], '--submitted-by')}
         if not (changes or grades or options['clear_submitted_by']
+                or options['submitted_by_primary_instructor']
                 or options['replace_grade_map']):
             raise CommandError('Nothing to apply. See --help.')
 
@@ -84,6 +89,7 @@ class Command(EthosCommand):
             final_grade_type=(changes.get('final_grade_type') or {}).get('id'),
             grade_map=grades, replace_grade_map=options['replace_grade_map'],
             submitted_by=(changes.get('grade_submitted_by') or {}).get('id'),
+            submitted_by_primary_instructor=options['submitted_by_primary_instructor'],
             clear_submitted_by=options['clear_submitted_by'])
         try:
             before, after = apply(dry_run=True, **kwargs)

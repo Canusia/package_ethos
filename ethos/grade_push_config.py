@@ -5,7 +5,9 @@ The grade push (``grade_push.push_final_grade``) reads three keys from the
 
     final_grade_type    {"id": guid}
     grade_map           {"<MyCE grade>": guid}
-    grade_submitted_by  {"id": guid}
+    grade_submitted_by  {"id": guid} — a fixed Banner person, or
+                        {"source": "primary_instructor"} — each section's
+                        primary instructor, looked up in Banner at push time
 
 Shared by ``set_grade_push_guids`` and the "Banner Grade Push" setting, so both
 edit only these keys, keep the rest of the blob and of the Setting row, and
@@ -21,6 +23,7 @@ from cis.models.settings import Setting, is_campus_scoped
 from cis.settings.sis_settings import sis_settings
 
 KEYS = ('final_grade_type', 'grade_map', 'grade_submitted_by')
+PRIMARY_INSTRUCTOR = 'primary_instructor'
 
 
 class GradePushConfigError(Exception):
@@ -51,12 +54,21 @@ def guid_of(value):
     return (value.get('id') or '') if isinstance(value, dict) else ''
 
 
+def is_primary_instructor(value):
+    """True when grade_submitted_by names each section's primary instructor."""
+    return isinstance(value, dict) and value.get('source') == PRIMARY_INSTRUCTOR
+
+
 def _row():
     return Setting.objects.filter(key=sis_settings.key).first()
 
 
 def load():
-    """The three keys, flattened: GUID strings ('' when unset) and the grade map."""
+    """The three keys, flattened: GUID strings ('' when unset) and the grade map.
+
+    ``submitted_by_primary_instructor`` is True when submittedBy is each
+    section's primary instructor (``grade_submitted_by`` is then '').
+    """
     setting = _row()
     blob = _parse_blob((setting.value or {}).get('guids') if setting else None)
     grade_map = blob.get('grade_map')
@@ -64,11 +76,13 @@ def load():
         'final_grade_type': guid_of(blob.get('final_grade_type')),
         'grade_map': dict(grade_map) if isinstance(grade_map, dict) else {},
         'grade_submitted_by': guid_of(blob.get('grade_submitted_by')),
+        'submitted_by_primary_instructor': is_primary_instructor(blob.get('grade_submitted_by')),
     }
 
 
 def apply(*, final_grade_type=None, grade_map=None, replace_grade_map=False,
-          submitted_by=None, clear_submitted_by=False, dry_run=False):
+          submitted_by=None, submitted_by_primary_instructor=False,
+          clear_submitted_by=False, dry_run=False):
     """Merge the given values into SIS GUIDS; returns (before, after) blobs."""
     setting = _row()
     value = dict(setting.value) if setting else {}
@@ -79,6 +93,8 @@ def apply(*, final_grade_type=None, grade_map=None, replace_grade_map=False,
         after['final_grade_type'] = {'id': final_grade_type}
     if submitted_by:
         after['grade_submitted_by'] = {'id': submitted_by}
+    elif submitted_by_primary_instructor:
+        after['grade_submitted_by'] = {'source': PRIMARY_INSTRUCTOR}
     if grade_map or replace_grade_map:
         base = {} if replace_grade_map else dict(before.get('grade_map') or {})
         base.update(grade_map or {})

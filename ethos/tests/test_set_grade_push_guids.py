@@ -68,6 +68,15 @@ class SetGradePushGuidsTests(TestCase):
 
         self.assertNotIn('grade_submitted_by', _guids())
 
+    def test_primary_instructor_flag(self):
+        _run('--submitted-by', PERSON)
+        _run('--submitted-by-primary-instructor')
+        self.assertEqual(_guids()['grade_submitted_by'], {'source': 'primary_instructor'})
+
+    def test_primary_instructor_and_person_are_exclusive(self):
+        with self.assertRaises(CommandError):
+            _run('--submitted-by', PERSON, '--submitted-by-primary-instructor')
+
     def test_rejects_a_value_that_is_not_a_guid(self):
         with self.assertRaises(CommandError):
             _run('--final-grade-type', 'FINAL')

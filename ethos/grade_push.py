@@ -8,7 +8,10 @@ imports ``grades``: it returns a plain object carrying the attributes of
 Configuration comes from the ``sis_guids`` setting:
     final_grade_type    {"id": guid}          required
     grade_map           {"A": guid, ...}      required, exact match after strip()
-    grade_submitted_by  {"id": guid}          required; Banner rejects a push without it
+    grade_submitted_by  {"id": guid}          required (Banner rejects a push without
+                        or {"source":          submittedBy): a fixed Banner person, or
+                        "primary_instructor"}  each section's primary instructor, looked
+                                               up in Banner per push
 
 Scale letters with no grade_map entry do not block a push of a mapped letter;
 config_errors() reports them for the settings page.
@@ -17,7 +20,7 @@ from types import SimpleNamespace
 
 from django.urls import NoReverseMatch, reverse
 
-from .grade_push_config import guid_of
+from .grade_push_config import guid_of, is_primary_instructor
 from .library.ethos import Ethos
 from .library.grades import UnverifiedGradesLookupError
 
@@ -72,8 +75,9 @@ def required_errors(guids):
     grade_map = guids.get('grade_map')
     if not isinstance(grade_map, dict) or not grade_map:
         errors.append('sis_guids.grade_map is empty.')
-    if not guid_of(guids.get('grade_submitted_by')):
-        errors.append('sis_guids.grade_submitted_by.id is not set (Banner requires submittedBy).')
+    submitted_by = guids.get('grade_submitted_by')
+    if not (guid_of(submitted_by) or is_primary_instructor(submitted_by)):
+        errors.append('sis_guids.grade_submitted_by is not set (Banner requires submittedBy).')
     return errors
 
 
@@ -114,6 +118,21 @@ def _submission_error(log):
             'Check the Ethos credentials/authorization configuration.'
         )
     return log.error_message or f'HTTP {log.response_status}'
+
+
+def _submitter(ethos, guids, section_registration_id):
+    """(submittedBy GUID, None), or (None, failed result) when it cannot be resolved."""
+    value = guids.get('grade_submitted_by')
+    if not is_primary_instructor(value):
+        return guid_of(value), None
+    from .grade_push_lookup import BannerLookupError, SubmitterError, primary_instructor
+    try:
+        return primary_instructor(ethos, section_registration_id), None
+    except SubmitterError as exc:
+        return None, _result(False, error=f'{exc} Nothing was sent.')
+    except BannerLookupError as exc:
+        return None, _result(False, log=exc.log, error=(
+            f'Could not find the primary instructor: {exc}'))
 
 
 def _record_campus(registration):
@@ -160,8 +179,10 @@ def _push_final_grade(registration, grade, existing_record_id, campus):
         return _result(False, error=(
             f"Grade '{key}' has no Banner mapping in sis_guids.grade_map."))
 
-    submitted_by = guid_of(guids.get('grade_submitted_by')) or None
     section_registration_id = str(registration.sis_id)
+    submitted_by, error = _submitter(ethos, guids, section_registration_id)
+    if error:
+        return error
 
     record_id = existing_record_id
     if not record_id:
