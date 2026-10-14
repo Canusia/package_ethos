@@ -13,6 +13,14 @@ _CONSUME_CONFIGURATOR = {
     ],
 }
 
+_GRADE_PUSH_CONFIGURATOR = {
+    'name': 'grade_push',
+    'title': 'Banner Grade Push',
+    'description': 'Banner GUIDs sent with final grades: grade type, grade map and submitted-by. '
+                   'Stored in SIS GUIDS.',
+    'categories': ['3'],
+}
+
 
 class EthosConfig(AppConfig):
     """Production — pip-installed package."""
@@ -21,6 +29,7 @@ class EthosConfig(AppConfig):
 
     CONFIGURATORS = [
         {'app': 'ethos', **_CONSUME_CONFIGURATOR},
+        {'app': 'ethos', **_GRADE_PUSH_CONFIGURATOR},
     ]
 
 
@@ -31,4 +40,5 @@ class DevEthosConfig(AppConfig):
 
     CONFIGURATORS = [
         {'app': 'ethos.ethos', **_CONSUME_CONFIGURATOR},
+        {'app': 'ethos.ethos', **_GRADE_PUSH_CONFIGURATOR},
     ]
