@@ -92,15 +92,16 @@ class PushFinalGradeTests(TestCase):
         self.assertIn('500', result.error)
         self.ethos.submit_unverified_grade.assert_not_called()
 
-    def test_submitted_by_none_when_not_configured(self):
+    def test_missing_submitted_by_fails_without_http(self):
         guids = dict(GUIDS)
         guids.pop('grade_submitted_by')
         self.ethos._load_sis_guids.return_value = guids
 
-        grade_push.push_final_grade(self.registration, 'A')
+        result = grade_push.push_final_grade(self.registration, 'A')
 
-        self.assertIsNone(
-            self.ethos.submit_unverified_grade.call_args.kwargs['submitted_by_id'])
+        self.assertFalse(result.success)
+        self.assertIn('grade_submitted_by', result.error)
+        self.ethos.submit_unverified_grade.assert_not_called()
 
     def test_unmapped_grade_fails_without_http(self):
         result = grade_push.push_final_grade(self.registration, 'B+')
@@ -159,8 +160,23 @@ class PushFinalGradeTests(TestCase):
         self.assertIn('authentic', result.error.lower())
 
     def test_config_errors_lists_each_problem(self):
-        self.assertEqual(len(grade_push.config_errors({})), 2)
+        self.assertEqual(len(grade_push.config_errors({})), 3)
         self.assertEqual(grade_push.config_errors(GUIDS), [])
+
+    def test_config_errors_reports_unmapped_scale_letters(self):
+        with patch.object(grade_push, '_grade_scale', return_value=['A', 'P', 'B']):
+            errors = grade_push.config_errors(GUIDS)
+        self.assertEqual(errors, ["Grade 'P' has no Banner mapping.",
+                                  "Grade 'B' has no Banner mapping."])
+
+    def test_unmapped_scale_letter_does_not_block_a_mapped_push(self):
+        with patch.object(grade_push, '_grade_scale', return_value=['A', 'P']):
+            grade_push.push_final_grade(self.registration, 'A')
+        self.ethos.submit_unverified_grade.assert_called_once()
+
+    def test_no_scale_hook_means_no_unmapped_errors(self):
+        with patch.object(grade_push, '_grade_scale', return_value=[]):
+            self.assertEqual(grade_push.config_errors(GUIDS), [])
 
 
 class ClientReuseTests(TestCase):

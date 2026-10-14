@@ -8,7 +8,10 @@ imports ``grades``: it returns a plain object carrying the attributes of
 Configuration comes from the ``sis_guids`` setting:
     final_grade_type    {"id": guid}          required
     grade_map           {"A": guid, ...}      required, exact match after strip()
-    grade_submitted_by  {"id": guid}          optional; omitted when blank
+    grade_submitted_by  {"id": guid}          required; Banner rejects a push without it
+
+Scale letters with no grade_map entry do not block a push of a mapped letter;
+config_errors() reports them for the settings page.
 """
 from types import SimpleNamespace
 
@@ -45,17 +48,47 @@ def _get_client(campus=None):
     return _clients[key]
 
 
-def config_errors(guids=None):
-    """Human-readable problems with the grade-push configuration ([] = OK)."""
-    if guids is None:
-        guids = _get_client()._load_sis_guids()
+def _grade_scale():
+    """Letters on the tenant's MyCE grade scale ([] when the tenant has no hook).
+
+    Resolved through the tenant seam so ethos never imports grades.
+    """
+    from cis.services.tenant_services import get_tenant_override
+    fn = get_tenant_override('grade_sis_pusher', 'grade_scale')
+    if fn is None:
+        return []
+    try:
+        return [str(g).strip() for g in (fn() or []) if str(g).strip()]
+    except Exception:
+        return []
+
+
+def required_errors(guids):
+    """Problems that stop every push: Banner rejects the request without these."""
     errors = []
     if not (guids.get('final_grade_type') or {}).get('id'):
         errors.append('sis_guids.final_grade_type.id is not set.')
     grade_map = guids.get('grade_map')
     if not isinstance(grade_map, dict) or not grade_map:
         errors.append('sis_guids.grade_map is empty.')
+    if not (guids.get('grade_submitted_by') or {}).get('id'):
+        errors.append('sis_guids.grade_submitted_by.id is not set (Banner requires submittedBy).')
     return errors
+
+
+def unmapped_grades(guids):
+    """Scale letters with no grade_map entry, in scale order."""
+    grade_map = guids.get('grade_map')
+    grade_map = grade_map if isinstance(grade_map, dict) else {}
+    return [g for g in _grade_scale() if g not in grade_map]
+
+
+def config_errors(guids=None):
+    """Human-readable problems with the grade-push configuration ([] = OK)."""
+    if guids is None:
+        guids = _get_client()._load_sis_guids()
+    return required_errors(guids) + [
+        f"Grade '{g}' has no Banner mapping." for g in unmapped_grades(guids)]
 
 
 def _log_url(log):
@@ -111,7 +144,7 @@ def _push_final_grade(registration, grade, existing_record_id, campus):
     ethos = _get_client(campus)
     guids = ethos._load_sis_guids()
 
-    errors = config_errors(guids)
+    errors = required_errors(guids)
     if errors:
         return _result(False, error=' '.join(errors))
 
