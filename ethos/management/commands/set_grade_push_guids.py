@@ -5,7 +5,7 @@ The grade push (``grade_push.push_final_grade``) reads three keys from the
 
     final_grade_type    {"id": guid}            required
     grade_map           {"<MyCE grade>": guid}  required
-    grade_submitted_by  {"id": guid}            optional
+    grade_submitted_by  {"id": guid}            required by Banner
 
 The blob is shared with every other Ethos lookup, so this command edits only
 those three keys and leaves the rest of the blob, and any other field on the
@@ -21,21 +21,17 @@ other Ethos commands this runs for one campus: pass ``--campus <code>`` there.
 A single-campus deployment needs no option.
 """
 import json
-import uuid
 
 from django.core.management.base import CommandError
 
-from cis.campus_context import current_campus, is_multi_campus
-from cis.models.settings import Setting, is_campus_scoped
-from cis.settings.sis_settings import sis_settings
-
 from ...command_base import EthosCommand
 from ...grade_push import config_errors
+from ...grade_push_config import GradePushConfigError, apply, normalise_guid
 
 
 def _guid(value, label):
     try:
-        return str(uuid.UUID(str(value).strip()))
+        return normalise_guid(value)
     except ValueError:
         raise CommandError(f'{label}: {value!r} is not a GUID.')
 
@@ -84,18 +80,15 @@ class Command(EthosCommand):
                 or options['replace_grade_map']):
             raise CommandError('Nothing to apply. See --help.')
 
-        setting = Setting.objects.filter(key=sis_settings.key).first()
-        value = dict(setting.value) if setting else {}
-        before = self._parse_blob(value.get('guids'))
-
-        after = dict(before)
-        after.update(changes)
-        if grades or options['replace_grade_map']:
-            base = {} if options['replace_grade_map'] else dict(before.get('grade_map') or {})
-            base.update(grades)
-            after['grade_map'] = base
-        if options['clear_submitted_by']:
-            after.pop('grade_submitted_by', None)
+        kwargs = dict(
+            final_grade_type=(changes.get('final_grade_type') or {}).get('id'),
+            grade_map=grades, replace_grade_map=options['replace_grade_map'],
+            submitted_by=(changes.get('grade_submitted_by') or {}).get('id'),
+            clear_submitted_by=options['clear_submitted_by'])
+        try:
+            before, after = apply(dry_run=True, **kwargs)
+        except GradePushConfigError as exc:
+            raise CommandError(str(exc))
 
         self._report(before, after)
         for error in config_errors(after):
@@ -105,13 +98,7 @@ class Command(EthosCommand):
             self.stdout.write(self.style.WARNING('Dry run: nothing saved.'))
             return
 
-        value['guids'] = json.dumps(after, indent=2)
-        if setting is None:
-            setting = Setting(key=sis_settings.key)
-            if is_multi_campus() and is_campus_scoped(sis_settings.key):
-                setting.campus = current_campus()
-        setting.value = value
-        setting.save()
+        apply(**kwargs)
         self.stdout.write(self.style.SUCCESS('Saved SIS GUIDS.'))
 
     def _read_map_file(self, path):
@@ -123,20 +110,6 @@ class Command(EthosCommand):
         if not isinstance(data, dict):
             raise CommandError(f'--grade-map-file {path}: expected a JSON object.')
         return {str(k).strip(): _guid(v, f'{path} {k}') for k, v in data.items()}
-
-    @staticmethod
-    def _parse_blob(raw):
-        if not raw:
-            return {}
-        try:
-            blob = json.loads(raw)
-        except ValueError as exc:
-            raise CommandError(
-                f'SIS GUIDS is not valid JSON ({exc}); fix it on the settings page '
-                'first. Nothing was changed.')
-        if not isinstance(blob, dict):
-            raise CommandError('SIS GUIDS is not a JSON object; nothing was changed.')
-        return blob
 
     def _report(self, before, after):
         for key in ('final_grade_type', 'grade_map', 'grade_submitted_by'):
