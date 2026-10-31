@@ -411,11 +411,17 @@ framework tests in `test_consume_*.py`) — the one to run for regression
 checks on this package.
 
 The root-level `ethos.tests` package (`tests/` at the submodule root) exists
-alongside it but as of this writing has 25 pre-existing failures (5 failures +
-20 errors) from a missing tenant importer module
-(`ethos.ethos.library.importer.ewu`) unrelated to any single change — do not
-treat a run of the bare `ethos.tests` label as a regression signal without
-first confirming which failures are pre-existing.
+alongside it. Its `__init__` re-exports two classes, so the bare `ethos.tests`
+label runs only those (26 tests); name every module to run all of it
+(`ethos.tests.test_academic_periods ethos.tests.test_api_request_delete …`, 148
+tests). As of 2026-10-31 it has 7 pre-existing failures, all in code untouched
+since v1.2.0: `test_api_request_delete` (2, builds `EthosBase` without
+`campus`), `test_academic_periods` (3, expects an unencoded `criteria`),
+`test_integration_config` (2, expects a `pull_sections` slug and the removed
+`EXTERNAL_SIS_IMPORTER` module). Do not treat them as a regression signal. The
+bare `ethos` label also discovers `ethos_sis/tests`, which only import with
+`-t .` from the submodule root (see the README) and otherwise show 15 loader
+errors.
 
 Tests mock `_api_request` to avoid real API calls.
 
