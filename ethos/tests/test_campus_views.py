@@ -80,7 +80,8 @@ class CampusViewTests(TestCase):
         self.assertEqual([r['id'] for r in rows], [self.msg_a.pk])
 
     def test_logs_list_api_is_scoped_to_the_campus(self):
-        rows = _rows(self._api(EthosLogViewSet, self.a))
+        with mock_ce_role():
+            rows = _rows(self._api(EthosLogViewSet, self.a))
         self.assertEqual([r['id'] for r in rows], [self.log_a.pk])
 
     def test_message_detail_of_another_campus_is_404(self):
@@ -159,11 +160,13 @@ class SingleCampusViewTests(TestCase):
         EthosLog.objects.create(method='GET', url='https://x/1', message_type='t')
         request = APIRequestFactory().get('/x/')
         force_authenticate(request, user=user)
-        rows = _rows(EthosLogViewSet.as_view({'get': 'list'})(request))
-        self.assertEqual(len(rows), 1)
+        with mock_ce_role():
+            response = EthosLogViewSet.as_view({'get': 'list'})(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(_rows(response)), 1)
 
 
 def mock_ce_role():
     from unittest import mock
     pkg = 'ethos.ethos' if importlib.util.find_spec('ethos.ethos') else 'ethos'
-    return mock.patch(f'{pkg}.views.messages.HasCERole.has_permission', return_value=True)
+    return mock.patch(f'{pkg}.permissions.HasCERole.has_permission', return_value=True)

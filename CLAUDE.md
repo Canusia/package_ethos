@@ -35,6 +35,7 @@ ethos/                           ← git submodule root (outer package)
     ├── reference.py             # Code-table reads + SIS GUIDS map for populate_sis_guids (via _api_request)
     ├── grade_push.py            # push_final_grade / config_errors — Banner unverified FINAL grade for the grades SIS push
     ├── urls.py                  # All ethos URL patterns (app_name='ethos')
+    ├── permissions.py           # HasCERole — every router viewset declares it (API gated like the CE pages; old path views.messages.HasCERole still works)
     ├── library/                 # All Ethos API client code
     │   ├── base.py              # EthosBase — auth, _api_request, get_preferred_accept_header
     │   ├── ethos.py             # Ethos class — composes all mixins

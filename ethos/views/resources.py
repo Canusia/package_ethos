@@ -15,6 +15,7 @@ from ..models import EthosApplication, EthosRepresentation, EthosResource
 from ..serializers import EthosResourceSerializer
 from ._client import ethos_client_or_error
 from ..campus import for_campus
+from ..permissions import HasCERole
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,7 @@ def sync_resources(apps_data, campus=None):
 
 class EthosResourceViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = EthosResourceSerializer
+    permission_classes = [HasCERole]
 
     def get_queryset(self):
         qs = for_campus(

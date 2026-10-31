@@ -7,27 +7,14 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.clickjacking import xframe_options_exempt
 
 from rest_framework import viewsets
-from rest_framework.permissions import BasePermission
 
 from cis.menu import cis_menu, draw_menu
 
 from ..campus import for_campus
+from ..permissions import HasCERole  # noqa: F401  (re-exported: old import path)
 from ..models import EthosMessage
 from ..serializers import EthosMessageSerializer
 from ..consume.service import consume_message
-
-
-class HasCERole(BasePermission):
-    """Mirrors urls.py's `_has_cis_role` page gate: anonymous denied, 'ce' role
-    required. EthosMessage rows can carry a student's name in target_label, so
-    the API must be gated the same as the pages that display it — otherwise
-    any logged-in student/instructor could list this endpoint directly."""
-
-    def has_permission(self, request, view):
-        user = request.user
-        if user.is_anonymous:
-            return False
-        return 'ce' in user.get_roles()
 
 
 class EthosMessageViewSet(viewsets.ReadOnlyModelViewSet):

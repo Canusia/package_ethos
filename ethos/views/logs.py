@@ -15,6 +15,7 @@ from rest_framework_datatables.filters import DatatablesFilterBackend
 
 from ..campus import for_campus
 from ..models import EthosLog
+from ..permissions import HasCERole
 from ..serializers import EthosLogSerializer
 
 
@@ -45,6 +46,7 @@ class EthosLogFilterBackend(DatatablesFilterBackend):
 
 class EthosLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = EthosLogSerializer
+    permission_classes = [HasCERole]
     filter_backends = [EthosLogFilterBackend]
 
     def get_queryset(self):
