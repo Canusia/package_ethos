@@ -1,3 +1,4 @@
+import inspect
 import logging
 
 from django_tasks import task
@@ -39,6 +40,24 @@ def tenant_import_hook(importer):
     return None
 
 
+def hook_accepts_skip_certificates(hook):
+    """True when the tenant hook takes ``skip_certificates`` (ctcd's does), by name or **kwargs."""
+    try:
+        params = inspect.signature(hook).parameters.values()
+    except (TypeError, ValueError):
+        return False
+    return any(p.name == 'skip_certificates' or p.kind is p.VAR_KEYWORD for p in params)
+
+
+def run_tenant_hook(hook, period_id, term, **kwargs):
+    """Call the tenant hook; a hook that returns nothing yields an empty counts dict."""
+    counts = hook(period_id, term, **kwargs)
+    if counts is None:
+        logger.warning('%s returned no counts for term %s', TENANT_IMPORT_HOOK, getattr(term, 'pk', term))
+        return {}
+    return counts
+
+
 @task(queue_name='default')
 def import_sections_for_term(term_id: str) -> dict:
     """Fetch and import all sections for a term from Ethos. Returns counts dict."""
@@ -63,7 +82,7 @@ def import_sections_for_term(term_id: str) -> dict:
         importer = SectionImporter()
         hook = tenant_import_hook(importer)
         if hook is not None:
-            return hook(period_id, term)
+            return run_tenant_hook(hook, period_id, term)
 
         ethos = Ethos(campus=campus)
         raw_sections = ethos.get_sections(period_id=period_id, accept=sections_import_accept(ethos))

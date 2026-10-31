@@ -47,6 +47,22 @@ class _TenantImporter:
         raise AssertionError('the generic import must not run when the tenant owns it')
 
 
+class _CertAwareImporter:
+    """ctcd's shape: the hook accepts skip_certificates."""
+    calls = []
+
+    def fetch_and_import_sections(self, period_id, term, skip_certificates=False):
+        self.calls.append((period_id, term, skip_certificates))
+        return {'section_created': 1}
+
+
+class _NoneImporter:
+    """A tenant hook that forgets to return its counts."""
+
+    def fetch_and_import_sections(self, period_id, term):
+        return None
+
+
 class _GenericImporter:
     def import_sections(self, raw_sections, term, skip_certificates=False):
         return {'section_created': len(raw_sections)}
@@ -66,6 +82,9 @@ class SectionTaskOverrideTests(TestCase):
              patch('cis.services.tenant_services.get_tenant_service',
                    return_value=_service(importer_cls)):
             return tasks.import_sections_for_term.func(1)
+
+    def test_a_hook_returning_none_yields_an_empty_counts_dict(self):
+        self.assertEqual(self._run(_NoneImporter, MagicMock()), {})
 
     def test_tenant_hook_owns_the_whole_term_import(self):
         client = MagicMock()
@@ -120,6 +139,44 @@ class SectionCommandOverrideTests(TestCase):
         self.assertEqual(_TenantImporter.calls, [('p-1', term)])
         client.get_sections.assert_not_called()
         self.assertIn('section_created', out.getvalue())
+
+    def _create(self, importer_cls, **options):
+        client = MagicMock()
+        client.get_academic_period_id.return_value = 'p-1'
+        term = SimpleNamespace(pk=1)
+        out = StringIO()
+        with patch(f'{P}.management.commands.import_sections_from_ethos.Ethos', return_value=client), \
+             patch('cis.models.term.Term.objects.filter') as flt, \
+             patch('cis.services.tenant_services.get_tenant_service',
+                   return_value=_service(importer_cls)):
+            flt.return_value.first.return_value = term
+            call_command('import_sections_from_ethos', '202620', create=True, stdout=out, **options)
+        return client, term, out.getvalue()
+
+    def test_no_certificates_is_passed_to_a_hook_that_accepts_it(self):
+        _CertAwareImporter.calls = []
+        _, term, out = self._create(_CertAwareImporter, no_certificates=True)
+        self.assertEqual(_CertAwareImporter.calls, [('p-1', term, True)])
+        self.assertNotIn('is ignored', out)
+
+    def test_hook_that_accepts_skip_certificates_gets_false_by_default(self):
+        _CertAwareImporter.calls = []
+        _, term, _ = self._create(_CertAwareImporter)
+        self.assertEqual(_CertAwareImporter.calls, [('p-1', term, False)])
+
+    def test_no_certificates_warns_when_the_hook_cannot_take_it(self):
+        _, term, out = self._create(_TenantImporter, no_certificates=True)
+        self.assertEqual(_TenantImporter.calls, [('p-1', term)])
+        self.assertIn('--no-certificates is ignored', out)
+
+    def test_a_hook_returning_none_does_not_crash_the_command(self):
+        _, _, out = self._create(_NoneImporter)
+        self.assertIn('returned no counts', out)
+
+    def test_create_with_csv_and_a_hook_fetches_only_once(self):
+        client, _, out = self._create(_TenantImporter, csv_path='/tmp/never-written.csv')
+        client.get_sections.assert_not_called()
+        self.assertIn('--csv is ignored', out)
 
     def test_dry_run_fetches_with_the_explicit_accept_header(self):
         client = MagicMock()

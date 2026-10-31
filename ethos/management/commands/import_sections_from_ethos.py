@@ -3,7 +3,9 @@ import logging
 
 from ...command_base import EthosCommand
 from ...library.ethos import Ethos
-from ...tasks import sections_import_accept, tenant_import_hook
+from ...tasks import (
+    hook_accepts_skip_certificates, run_tenant_hook, sections_import_accept, tenant_import_hook,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +83,15 @@ class Command(EthosCommand):
             from cis.services.tenant_services import get_tenant_service
             hook = tenant_import_hook(get_tenant_service('sis_importer').SISImporter())
 
-        if csv_path or not do_create or hook is None:
+        if hook is not None and csv_path:
+            # The tenant fetches for itself; a second, generic fetch only for the CSV
+            # would double the Ethos traffic for the term.
+            self.stdout.write(self.style.WARNING(
+                "--csv is ignored with --create: the tenant's importer does its own fetch. "
+                "Run without --create to write the CSV."))
+            csv_path = None
+
+        if not do_create or hook is None:
             self.stdout.write('Fetching sections from Ethos...')
             raw_sections = ethos.get_sections(period_id=period_id, accept=sections_import_accept(ethos))
             self.stdout.write(f'Found {len(raw_sections)} sections.')
@@ -95,11 +105,16 @@ class Command(EthosCommand):
             return
 
         if hook is not None:
-            if skip_certificates:
+            kwargs = {}
+            if hook_accepts_skip_certificates(hook):
+                kwargs['skip_certificates'] = skip_certificates
+            elif skip_certificates:
                 self.stdout.write(self.style.WARNING(
-                    "--no-certificates is ignored: the tenant's importer runs the whole term import."))
+                    "--no-certificates is ignored: the tenant's importer does not take skip_certificates."))
             self.stdout.write("Running the tenant's term import...")
-            counts = hook(period_id, term)
+            counts = run_tenant_hook(hook, period_id, term, **kwargs)
+            if not counts:
+                self.stdout.write(self.style.WARNING("The tenant's import returned no counts."))
             for key, value in counts.items():
                 self.stdout.write(f'  {key}: {value}')
             if counts.get('error'):

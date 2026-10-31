@@ -88,8 +88,11 @@ filter or extra context (e.g. ctcd's two-step program-category import) defines
 `fetch_and_import_sections(period_id, term) -> dict` on `SISImporter`. The term action's
 task (`import_sections_for_term`) and `import_sections_from_ethos --create` then hand it the
 resolved period GUID and term and skip the package's fetch; the method runs inside the term's
-campus context and returns the counts dict (or `{'error': ...}`). Dry runs and `--csv` still use
-the generic fetch.
+campus context and returns the counts dict (or `{'error': ...}`; returning nothing counts as
+`{}`). If the method also takes `skip_certificates` (by name or `**kwargs`), the command passes
+`--no-certificates` through; otherwise that flag is ignored with a warning. Dry runs and `--csv`
+still use the generic fetch; `--create --csv` with the hook skips the CSV (with a warning) rather
+than fetching the term twice, so write the CSV with a dry run.
 
 **Own term action.** The package registers "Pull Sections from SIS" (slug
 `trigger_section_import`) only if the tenant has not already registered an action under that
