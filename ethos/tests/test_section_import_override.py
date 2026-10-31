@@ -2,8 +2,9 @@
 
 * A tenant SISImporter that defines ``fetch_and_import_sections(period_id, term)``
   owns the whole fetch + import: the task and the command hand it the period and term.
-* Otherwise the package's generic fetch asks for the representation its importer
-  contract parses (sections-maximum v16) explicitly, not whatever the client defaults to.
+* Otherwise the package's generic fetch asks for a representation its importer
+  contract parses: a preferred sections-maximum representation if one is set, else
+  sections-maximum v16 explicitly (never a non-maximum preference).
 * The package never overwrites a term action a tenant already registered under the
   same slug.
 """
@@ -28,6 +29,10 @@ else:
 
 TERM = SimpleNamespace(pk=1, external_sis_id='p-1', code='202620',
                        academic_year=SimpleNamespace(campus=None))
+
+
+MAX_V16_2 = 'application/vnd.hedtech.integration.sections-maximum.v16.2.0+json'
+NON_MAX_V16_1 = 'application/vnd.hedtech.integration.v16.1.0+json'
 
 
 class _TenantImporter:
@@ -78,6 +83,24 @@ class SectionTaskOverrideTests(TestCase):
         self.assertIn('sections-maximum', tasks.SECTIONS_IMPORT_ACCEPT)
         self.assertEqual(counts, {'section_created': 2, 'total_fetched': 2})
 
+    def test_a_preferred_maximum_representation_is_honoured(self):
+        client = MagicMock()
+        client.get_preferred_accept_header.return_value = MAX_V16_2
+        client.get_sections.return_value = []
+        self._run(_GenericImporter, client)
+        client.get_preferred_accept_header.assert_called_with('sections')
+        client.get_sections.assert_called_once_with(period_id='p-1', accept=MAX_V16_2)
+
+    def test_a_preferred_non_maximum_representation_is_overridden(self):
+        for preferred in (NON_MAX_V16_1, None):
+            with self.subTest(preferred=preferred):
+                client = MagicMock()
+                client.get_preferred_accept_header.return_value = preferred
+                client.get_sections.return_value = []
+                self._run(_GenericImporter, client)
+                client.get_sections.assert_called_once_with(
+                    period_id='p-1', accept=tasks.SECTIONS_IMPORT_ACCEPT)
+
 
 class SectionCommandOverrideTests(TestCase):
     def setUp(self):
@@ -106,6 +129,26 @@ class SectionCommandOverrideTests(TestCase):
              patch('cis.models.term.Term.objects.filter') as flt:
             flt.return_value.first.return_value = SimpleNamespace(pk=1)
             call_command('import_sections_from_ethos', '202620', stdout=StringIO())
+        client.get_sections.assert_called_once_with(
+            period_id='p-1', accept=tasks.SECTIONS_IMPORT_ACCEPT)
+
+    def _dry_run(self, preferred):
+        client = MagicMock()
+        client.get_academic_period_id.return_value = 'p-1'
+        client.get_preferred_accept_header.return_value = preferred
+        client.get_sections.return_value = []
+        with patch(f'{P}.management.commands.import_sections_from_ethos.Ethos', return_value=client), \
+             patch('cis.models.term.Term.objects.filter') as flt:
+            flt.return_value.first.return_value = SimpleNamespace(pk=1)
+            call_command('import_sections_from_ethos', '202620', stdout=StringIO())
+        return client
+
+    def test_dry_run_honours_a_preferred_maximum_representation(self):
+        client = self._dry_run(MAX_V16_2)
+        client.get_sections.assert_called_once_with(period_id='p-1', accept=MAX_V16_2)
+
+    def test_dry_run_overrides_a_preferred_non_maximum_representation(self):
+        client = self._dry_run(NON_MAX_V16_1)
         client.get_sections.assert_called_once_with(
             period_id='p-1', accept=tasks.SECTIONS_IMPORT_ACCEPT)
 

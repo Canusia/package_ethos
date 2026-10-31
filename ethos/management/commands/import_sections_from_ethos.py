@@ -3,7 +3,7 @@ import logging
 
 from ...command_base import EthosCommand
 from ...library.ethos import Ethos
-from ...tasks import SECTIONS_IMPORT_ACCEPT, tenant_import_hook
+from ...tasks import sections_import_accept, tenant_import_hook
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ class Command(EthosCommand):
 
         if csv_path or not do_create or hook is None:
             self.stdout.write('Fetching sections from Ethos...')
-            raw_sections = ethos.get_sections(period_id=period_id, accept=SECTIONS_IMPORT_ACCEPT)
+            raw_sections = ethos.get_sections(period_id=period_id, accept=sections_import_accept(ethos))
             self.stdout.write(f'Found {len(raw_sections)} sections.')
 
             if csv_path:

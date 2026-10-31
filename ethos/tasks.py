@@ -5,10 +5,23 @@ from django_tasks import task
 logger = logging.getLogger(__name__)
 
 # The representation the generic import's ``SISImporter.import_sections`` contract
-# parses (instructorRosterDetails, instructionalEvents, ...). Passed explicitly so a
-# preferred representation chosen for other 'sections' calls cannot change what the
+# parses (instructorRosterDetails, instructionalEvents, ...). Used when no preferred
+# 'sections' representation is set, or when the preferred one is not a
+# sections-maximum one, so a non-maximum preference cannot change the shape the
 # importer is handed (package_ethos#11).
 SECTIONS_IMPORT_ACCEPT = 'application/vnd.hedtech.integration.sections-maximum.v16+json'
+
+
+def sections_import_accept(ethos):
+    """The Accept header for the generic term section import.
+
+    A preferred sections-maximum representation (e.g. pinned to v16.2.0 in the
+    resource browser) is honoured: it has the shape the importer parses. Any other
+    preference, or none, gets ``SECTIONS_IMPORT_ACCEPT``."""
+    preferred = ethos.get_preferred_accept_header('sections')
+    if isinstance(preferred, str) and 'sections-maximum' in preferred:
+        return preferred
+    return SECTIONS_IMPORT_ACCEPT
 
 #: Optional tenant hook: ``SISImporter.fetch_and_import_sections(period_id, term) -> dict``.
 #: When the tenant's importer defines it, the tenant owns the whole term import
@@ -53,7 +66,7 @@ def import_sections_for_term(term_id: str) -> dict:
             return hook(period_id, term)
 
         ethos = Ethos(campus=campus)
-        raw_sections = ethos.get_sections(period_id=period_id, accept=SECTIONS_IMPORT_ACCEPT)
+        raw_sections = ethos.get_sections(period_id=period_id, accept=sections_import_accept(ethos))
         counts = importer.import_sections(raw_sections, term=term)
         counts['total_fetched'] = len(raw_sections)
         return counts

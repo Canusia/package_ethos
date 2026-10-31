@@ -274,7 +274,7 @@ The `EXTERNAL_SIS_IMPORTER` setting is **no longer used**.
 `tasks.py` defines `import_sections_for_term(term_id)` as a `django-tasks` `@task`. It:
 1. Resolves the Ethos period ID from `term.external_sis_id` (or falls back to `get_academic_period_id(term.code)`)
 2. If the tenant's `SISImporter` defines `fetch_and_import_sections(period_id, term)`, returns that (the tenant owns the whole import — package_ethos#11)
-3. Otherwise fetches raw sections via `Ethos(campus=…).get_sections(period_id=..., accept=SECTIONS_IMPORT_ACCEPT)` (explicit maximum v16)
+3. Otherwise fetches raw sections via `Ethos(campus=…).get_sections(period_id=..., accept=sections_import_accept(ethos))`: the preferred `sections` representation when it is a `sections-maximum` one (EWU pins `sections-maximum.v16.2.0`), else `SECTIONS_IMPORT_ACCEPT` (explicit maximum v16)
 4. Runs `SectionImporter().import_sections(raw_sections, term=term)` and returns a counts dict
 
 `views/sections.py` registers the "Pull Sections from SIS" term action through `register_term_action()`, which never overwrites an action the tenant already registered under the slug `trigger_section_import`.

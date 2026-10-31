@@ -78,8 +78,10 @@ SISImporter = get_tenant_service('sis_importer').SISImporter
 ```
 
 `SISImporter` must implement `import_sections(raw_sections, term, skip_certificates=False) -> dict`.
-The package's generic fetch hands it the `sections-maximum.v16` representation (requested
-explicitly, whatever preferred representation is set for `sections`).
+The package's generic fetch always hands it a sections-maximum representation: the preferred
+representation set for `sections` when it is a `sections-maximum` one (e.g. `v16.2.0`),
+otherwise `sections-maximum.v16` explicitly (a non-maximum preference is ignored here, because
+the importer parses the maximum shape).
 
 **Owning the whole term import (optional).** A tenant whose import needs its own fetch, a
 filter or extra context (e.g. ctcd's two-step program-category import) defines
