@@ -226,3 +226,23 @@ class TermActionRegistrationTests(SimpleTestCase):
                         slug='trigger_section_import')(tenant_handler)
         sections.register_term_action(registry)
         self.assertIs(registry._find_action('trigger_section_import')['handler'], tenant_handler)
+
+
+class LegacyRegistryTests(SimpleTestCase):
+    """Older host ActionRegistry versions have no ``_find_action``; ``_groups`` is read instead."""
+
+    def _registry(self, groups):
+        registry = SimpleNamespace(_groups=groups, action=MagicMock())
+        registry.action.return_value = lambda handler: handler
+        return registry
+
+    def test_a_tenant_action_in_groups_is_kept(self):
+        registry = self._registry({'sis': {'actions': {'trigger_section_import': {'handler': object()}}}})
+        sections.register_term_action(registry)
+        registry.action.assert_not_called()
+
+    def test_registers_when_groups_do_not_hold_the_slug(self):
+        registry = self._registry({'sis': {'actions': {'other': {}}}, 'misc': {}})
+        sections.register_term_action(registry)
+        registry.action.assert_called_once()
+        self.assertEqual(registry.action.call_args.args, ('sis',))

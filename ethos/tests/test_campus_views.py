@@ -84,6 +84,24 @@ class CampusViewTests(TestCase):
             rows = _rows(self._api(EthosLogViewSet, self.a))
         self.assertEqual([r['id'] for r in rows], [self.log_a.pk])
 
+    def test_id_search_never_finds_another_campus_log(self):
+        from .test_log_views import _feed_params
+
+        def search(term):
+            request = APIRequestFactory().get('/x/', _feed_params(search=term))
+            force_authenticate(request, user=self.user)
+            with mock_ce_role(), campus_context(self.a):
+                response = EthosLogViewSet.as_view({'get': 'list'})(request)
+            response.render()
+            self.assertEqual(response.status_code, 200)
+            return json.loads(response.content)
+
+        other = search(str(self.log_b.pk))
+        self.assertEqual(other['data'], [])
+        self.assertEqual(other['recordsFiltered'], 0)
+        own = search(str(self.log_a.pk))
+        self.assertEqual([r['id'] for r in own['data']], [self.log_a.pk])
+
     def test_message_detail_of_another_campus_is_404(self):
         from django.http import Http404
         with campus_context(self.a):
