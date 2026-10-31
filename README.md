@@ -401,7 +401,7 @@ docker exec django_web_ewu python /app/webapp/manage.py db_worker
 - The term detail page (`/ce/term/<id>`) has a "Pull Sections from SIS" action that enqueues `import_sections_for_term` and polls for completion.
 - The academic year add page (`/ce/academic_year/add_new`) has a "Import from SIS" flow for looking up and creating periods from Ethos.
 - The resource browser at `/ce/ethos/resources` shows all available Ethos API resources with their supported methods and representations. Click a row to open the modal detail and set a preferred Accept header.
-- The API log viewer at `/ce/ethos/logs` shows every Ethos API call with request/response details accessible via modal.
+- The API log viewer at `/ce/ethos/logs` shows every Ethos API call with request/response details accessible via modal. The ID column is sortable, and typing a log id in the search box finds that log (exact match, alongside the usual text search). The log detail (modal and full page) has a **Copy for Claude** button that copies the log id, time, campus, method + full URL, type, status, request headers/body and response body as one markdown block, ready to paste into a Claude Code chat.
 - The API Explorer at `/ce/ethos/status` allows admins to call any of the 44 registered Ethos methods interactively with optional `offset`/`limit` slicing.
 
 ## Standalone CLI (`ethos-sis`)

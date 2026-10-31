@@ -1,0 +1,50 @@
+{% comment %}
+"Copy for Claude" (package_ethos#12): one click puts the whole call, as markdown, on the
+clipboard. The text is built server-side (views.logs.log_copy_text) and autoescaped into a
+hidden textarea, so nothing is truncated. Used by the full page and the modal partial; the
+click handler is delegated and bound once, so the modal can be reloaded freely.
+{% endcomment %}
+<textarea class="ethos-log-copy d-none" aria-hidden="true" readonly>{{ copy_text }}</textarea>
+<button type="button" class="btn btn-sm btn-outline-primary ethos-log-copy-btn"
+        title="Copy URL, method, request and response as markdown">
+  <i class="far fa-copy"></i>&nbsp;<span class="ethos-log-copy-label">Copy for Claude</span>
+</button>
+<script>
+(function () {
+  if (window.ethosLogCopyBound) return;
+  window.ethosLogCopyBound = true;
+
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok ? Promise.resolve() : Promise.reject();
+  }
+
+  document.addEventListener('click', function (event) {
+    var btn = event.target.closest('.ethos-log-copy-btn');
+    if (!btn) return;
+    var source = btn.parentNode.querySelector('.ethos-log-copy');
+    if (!source) return;
+    var text = source.value;
+    var copied = (navigator.clipboard && window.isSecureContext)
+      ? navigator.clipboard.writeText(text).catch(function () { return fallbackCopy(text); })
+      : fallbackCopy(text);
+    var label = btn.querySelector('.ethos-log-copy-label');
+    copied.then(function () {
+      label.textContent = 'Copied';
+    }, function () {
+      label.textContent = 'Copy failed';
+    }).then(function () {
+      setTimeout(function () { label.textContent = 'Copy for Claude'; }, 2000);
+    });
+  });
+})();
+</script>

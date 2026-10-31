@@ -5,9 +5,12 @@
       <span class="badge badge-{% if log.method == 'GET' %}success{% elif log.method == 'POST' %}primary{% elif log.method == 'PUT' %}warning{% else %}secondary{% endif %} mr-1">{{ log.method }}</span>
       <code style="font-size:0.9rem;">{{ log.path }}</code>
     </h5>
-    <small class="text-muted">{{ log.sent_on|date:"m/d/Y g:i:s A" }} &nbsp;&middot;&nbsp; {{ log.message_type }}</small>
+    <small class="text-muted">#{{ log.pk }} &nbsp;&middot;&nbsp; {{ log.sent_on|date:"m/d/Y g:i:s A" }} &nbsp;&middot;&nbsp; {{ log.message_type }}</small>
   </div>
-  <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+  <div class="d-flex align-items-start">
+    <span class="mr-2">{% include "ethos/logs/_copy_for_claude.html" %}</span>
+    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+  </div>
 </div>
 
 <div class="modal-body">

@@ -16,9 +16,10 @@
       <table id="logs_table" class="table table-striped responsive" style="width:100%">
         <thead>
           <tr>
+            <th data-data="id"            data-name="id">ID</th>
             <th data-data="sent_on"       data-name="sent_on">Sent On</th>
             <th data-data="method"        data-name="method">Method</th>
-            <th data-data="path"          data-name="path">Path</th>
+            <th data-data="path"          data-name="url">Path</th>
             <th data-data="message_type"  data-name="message_type">Type</th>
             <th data-data="response_status" data-name="response_status">Status</th>
             <th data-data="id"            data-name="id"><span class="sr-only">Actions</span></th>
@@ -55,8 +56,10 @@ $(document).ready(function () {
     serverSide: true,
     processing: true,
     lengthMenu: [30, 50, 100],
-    order: [[0, 'desc']],
+    order: [[1, 'desc']],
     columns: [
+      // ID: searchable server-side as an exact match (EthosLogFilterBackend), not icontains.
+      { searchable: false, render: function (data) { return '<small class="text-muted">' + data + '</small>'; } },
       { render: function (data) { return '<small>' + data + '</small>'; } },
       {
         render: function (data) {
