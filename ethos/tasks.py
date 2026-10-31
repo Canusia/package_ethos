@@ -4,6 +4,27 @@ from django_tasks import task
 
 logger = logging.getLogger(__name__)
 
+# The representation the generic import's ``SISImporter.import_sections`` contract
+# parses (instructorRosterDetails, instructionalEvents, ...). Passed explicitly so a
+# preferred representation chosen for other 'sections' calls cannot change what the
+# importer is handed (package_ethos#11).
+SECTIONS_IMPORT_ACCEPT = 'application/vnd.hedtech.integration.sections-maximum.v16+json'
+
+#: Optional tenant hook: ``SISImporter.fetch_and_import_sections(period_id, term) -> dict``.
+#: When the tenant's importer defines it, the tenant owns the whole term import
+#: (which representation, which sections, what extra context) and the package only
+#: resolves the period and the campus (package_ethos#11).
+TENANT_IMPORT_HOOK = 'fetch_and_import_sections'
+
+
+def tenant_import_hook(importer):
+    """The tenant importer's bound whole-term import, or None.
+
+    Looked up on the class so only a method the tenant actually defines counts."""
+    if callable(getattr(type(importer), TENANT_IMPORT_HOOK, None)):
+        return getattr(importer, TENANT_IMPORT_HOOK)
+    return None
+
 
 @task(queue_name='default')
 def import_sections_for_term(term_id: str) -> dict:
@@ -26,8 +47,13 @@ def import_sections_for_term(term_id: str) -> dict:
         if not period_id:
             return {'error': 'Could not resolve Ethos period ID for this term'}
 
+        importer = SectionImporter()
+        hook = tenant_import_hook(importer)
+        if hook is not None:
+            return hook(period_id, term)
+
         ethos = Ethos(campus=campus)
-        raw_sections = ethos.get_sections(period_id=period_id)
-        counts = SectionImporter().import_sections(raw_sections, term=term)
+        raw_sections = ethos.get_sections(period_id=period_id, accept=SECTIONS_IMPORT_ACCEPT)
+        counts = importer.import_sections(raw_sections, term=term)
         counts['total_fetched'] = len(raw_sections)
         return counts

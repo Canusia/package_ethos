@@ -7,7 +7,6 @@ from myce.component_registry.term import term_actions
 logger = logging.getLogger(__name__)
 
 
-@term_actions.action('sis', label='Pull Sections from SIS', icon='fa fa-download', scope=['detail'])
 def trigger_section_import(request):
     """POST endpoint to enqueue a section import task for a term."""
     ids = request.POST.getlist('ids[]')
@@ -28,6 +27,34 @@ def trigger_section_import(request):
         'title': 'Importing Sections',
         'message': 'Section import is running…',
     })
+
+
+def _registered(registry, slug):
+    """Whether ``registry`` already holds an action under ``slug``. Host ActionRegistry
+    versions differ per tenant, so read it defensively."""
+    find = getattr(registry, '_find_action', None)
+    if callable(find):
+        return find(slug) is not None
+    groups = getattr(registry, '_groups', {}) or {}
+    return any(slug in (g.get('actions') or {}) for g in groups.values())
+
+
+def register_term_action(registry=term_actions):
+    """Register 'Pull Sections from SIS' unless the tenant already registered an action
+    under the same slug: the tenant's own term import wins (package_ethos#11).
+
+    A tenant that only needs a different fetch/filter should define
+    ``SISImporter.fetch_and_import_sections(period_id, term)`` instead; this action's task
+    then delegates the whole import to it."""
+    if _registered(registry, trigger_section_import.__name__):
+        logger.info('ethos: term action %r already registered by the tenant; keeping it.',
+                    trigger_section_import.__name__)
+        return
+    registry.action('sis', label='Pull Sections from SIS', icon='fa fa-download',
+                    scope=['detail'])(trigger_section_import)
+
+
+register_term_action()
 
 
 def section_import_status(request):

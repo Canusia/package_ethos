@@ -3,6 +3,7 @@ import logging
 
 from ...command_base import EthosCommand
 from ...library.ethos import Ethos
+from ...tasks import SECTIONS_IMPORT_ACCEPT, tenant_import_hook
 
 logger = logging.getLogger(__name__)
 
@@ -73,16 +74,36 @@ class Command(EthosCommand):
             return
         self.stdout.write(f'Using term: {term} (id={term.pk})')
 
-        self.stdout.write('Fetching sections from Ethos...')
-        raw_sections = ethos.get_sections(period_id=period_id)
-        self.stdout.write(f'Found {len(raw_sections)} sections.')
+        # A tenant importer that owns the whole term import does its own fetch
+        # (package_ethos#11); the dry run and CSV stay the package's generic view.
+        hook = None
+        if do_create:
+            from cis.services.tenant_services import get_tenant_service
+            hook = tenant_import_hook(get_tenant_service('sis_importer').SISImporter())
 
-        if csv_path:
-            self._write_csv(raw_sections, csv_path)
+        if csv_path or not do_create or hook is None:
+            self.stdout.write('Fetching sections from Ethos...')
+            raw_sections = ethos.get_sections(period_id=period_id, accept=SECTIONS_IMPORT_ACCEPT)
+            self.stdout.write(f'Found {len(raw_sections)} sections.')
+
+            if csv_path:
+                self._write_csv(raw_sections, csv_path)
 
         if not do_create:
             self._dry_run(raw_sections)
             self.stdout.write(self.style.NOTICE('Dry run — pass --create to import into the database.'))
+            return
+
+        if hook is not None:
+            if skip_certificates:
+                self.stdout.write(self.style.WARNING(
+                    "--no-certificates is ignored: the tenant's importer runs the whole term import."))
+            self.stdout.write("Running the tenant's term import...")
+            counts = hook(period_id, term)
+            for key, value in counts.items():
+                self.stdout.write(f'  {key}: {value}')
+            if counts.get('error'):
+                self.stdout.write(self.style.ERROR(str(counts['error'])))
             return
 
         self._import(raw_sections, skip_certificates, term)

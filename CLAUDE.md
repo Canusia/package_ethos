@@ -98,7 +98,7 @@ See `README.md` for full integration steps. In brief, the host app (`myce/`) mus
 2. Add ethos `staticfiles/` to `STATICFILES_DIRS` (DEBUG-conditional path)
 3. Provide a `SISImporter` in the tenant-services app and set `settings.TENANT_SERVICES_APP` to it — this package resolves it via `cis.services.tenant_services.get_tenant_service('sis_importer')`
 4. Include `path('ce/ethos/', include('ethos.ethos.urls'))` in `myce/urls.py`
-5. Register term actions via `@term_actions.action(...)` in `ethos/views/sections.py`
+5. Term actions are registered by `ethos/views/sections.py` (`register_term_action()`; a tenant action with the same slug wins)
 6. Add the ethos SIS nav group to the CE menu in DB settings (see README)
 
 ## Dual App Configuration
@@ -273,9 +273,11 @@ The `EXTERNAL_SIS_IMPORTER` setting is **no longer used**.
 
 `tasks.py` defines `import_sections_for_term(term_id)` as a `django-tasks` `@task`. It:
 1. Resolves the Ethos period ID from `term.external_sis_id` (or falls back to `get_academic_period_id(term.code)`)
-2. Fetches raw sections via `Ethos().get_sections(period_id=...)`
-3. Runs `SectionImporter().import_sections(raw_sections, term=term)`
-4. Returns a counts dict
+2. If the tenant's `SISImporter` defines `fetch_and_import_sections(period_id, term)`, returns that (the tenant owns the whole import — package_ethos#11)
+3. Otherwise fetches raw sections via `Ethos(campus=…).get_sections(period_id=..., accept=SECTIONS_IMPORT_ACCEPT)` (explicit maximum v16)
+4. Runs `SectionImporter().import_sections(raw_sections, term=term)` and returns a counts dict
+
+`views/sections.py` registers the "Pull Sections from SIS" term action through `register_term_action()`, which never overwrites an action the tenant already registered under the slug `trigger_section_import`.
 
 Run the worker:
 ```bash

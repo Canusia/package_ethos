@@ -78,6 +78,21 @@ SISImporter = get_tenant_service('sis_importer').SISImporter
 ```
 
 `SISImporter` must implement `import_sections(raw_sections, term, skip_certificates=False) -> dict`.
+The package's generic fetch hands it the `sections-maximum.v16` representation (requested
+explicitly, whatever preferred representation is set for `sections`).
+
+**Owning the whole term import (optional).** A tenant whose import needs its own fetch, a
+filter or extra context (e.g. ctcd's two-step program-category import) defines
+`fetch_and_import_sections(period_id, term) -> dict` on `SISImporter`. The term action's
+task (`import_sections_for_term`) and `import_sections_from_ethos --create` then hand it the
+resolved period GUID and term and skip the package's fetch; the method runs inside the term's
+campus context and returns the counts dict (or `{'error': ...}`). Dry runs and `--csv` still use
+the generic fetch.
+
+**Own term action.** The package registers "Pull Sections from SIS" (slug
+`trigger_section_import`) only if the tenant has not already registered an action under that
+slug, so a tenant action registered before the ethos URLs load is never replaced. Prefer the
+hook above; it needs no import-order care.
 
 The `EXTERNAL_SIS_IMPORTER` settings constant is **no longer used**.
 
