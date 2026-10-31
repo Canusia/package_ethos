@@ -45,6 +45,14 @@
 <script>
 var METHOD_COLORS = { GET: 'success', POST: 'primary', PUT: 'warning', DELETE: 'danger' };
 
+// Every value goes through esc() before it reaches markup: log paths are unquoted
+// and can hold student-entered text (stored XSS otherwise).
+function esc(s) {
+  var d = document.createElement('div');
+  d.textContent = s == null ? '' : s;
+  return d.innerHTML.replace(/"/g, '&quot;');
+}
+
 $(document).ready(function () {
   var table = $('#logs_table').DataTable({
     dom: 'B<"float-left mt-3 mb-3"l><"float-right mt-3"f><"row clear">rt<"row"<"col-6"i><"col-6 float-right"p>>',
@@ -59,29 +67,29 @@ $(document).ready(function () {
     order: [[1, 'desc']],
     columns: [
       // ID: searchable server-side as an exact match (EthosLogFilterBackend), not icontains.
-      { searchable: false, render: function (data) { return '<small class="text-muted">' + data + '</small>'; } },
-      { render: function (data) { return '<small>' + data + '</small>'; } },
+      { searchable: false, render: function (data) { return '<small class="text-muted">' + esc(data) + '</small>'; } },
+      { render: function (data) { return '<small>' + esc(data) + '</small>'; } },
       {
         render: function (data) {
           var cls = METHOD_COLORS[data] || 'secondary';
-          return '<span class="badge badge-' + cls + '">' + data + '</span>';
+          return '<span class="badge badge-' + cls + '">' + esc(data) + '</span>';
         }
       },
-      { render: function (data) { return '<code style="font-size:0.8rem;">' + data + '</code>'; } },
-      { render: function (data) { return '<span class="text-muted small">' + data + '</span>'; } },
+      { render: function (data) { return '<code style="font-size:0.8rem;">' + esc(data) + '</code>'; } },
+      { render: function (data) { return '<span class="text-muted small">' + esc(data) + '</span>'; } },
       {
         searchable: false,
         render: function (data, type, row) {
           if (!data) return '—';
           var cls = data >= 200 && data < 300 ? 'success' : data >= 400 ? 'danger' : 'warning';
-          return '<span class="badge badge-' + cls + '">' + data + '</span>';
+          return '<span class="badge badge-' + cls + '">' + esc(data) + '</span>';
         }
       },
       {
         searchable: false,
         orderable: false,
         render: function (data, type, row) {
-          return '<button class="btn btn-sm btn-outline-secondary detail-btn" data-pk="' + data + '">Details</button>';
+          return '<button class="btn btn-sm btn-outline-secondary detail-btn" data-pk="' + esc(data) + '">Details</button>';
         }
       }
     ]

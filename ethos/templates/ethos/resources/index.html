@@ -71,6 +71,14 @@
 </main>
 
 <script>
+// Every value goes through esc() before it reaches markup: values come
+// from the SIS's resource catalogue, not from this page.
+function esc(s) {
+  var d = document.createElement('div');
+  d.textContent = s == null ? '' : s;
+  return d.innerHTML.replace(/"/g, '&quot;');
+}
+
 $(document).ready(function () {
   var table = $('#resources_table').DataTable({
     dom: 'B<"float-left mt-3 mb-3"l><"float-right mt-3"f><"row clear">rt<"row"<"col-6"i><"col-6 float-right"p>>',
@@ -95,10 +103,10 @@ $(document).ready(function () {
     columns: [
       {
         render: function (data, type, row) {
-          return '<code>' + data + '</code>';
+          return '<code>' + esc(data) + '</code>';
         }
       },
-      null,
+      { render: function (data) { return esc(data); } },
       {
         searchable: false,
         orderable: false,
@@ -106,8 +114,8 @@ $(document).ready(function () {
           if (!data || data.length === 0) return '—';
           var colors = { get: 'success', post: 'primary', put: 'warning', delete: 'danger' };
           return data.map(function (m) {
-            var cls = colors[m.toLowerCase()] || 'secondary';
-            return '<span class="badge badge-' + cls + ' mr-1">' + m.toUpperCase() + '</span>';
+            var cls = colors[String(m).toLowerCase()] || 'secondary';
+            return '<span class="badge badge-' + cls + ' mr-1">' + esc(String(m).toUpperCase()) + '</span>';
           }).join('');
         }
       },
@@ -116,7 +124,7 @@ $(document).ready(function () {
         orderable: false,
         className: 'text-center',
         render: function (data) {
-          return '<span class="badge badge-light border">' + data + '</span>';
+          return '<span class="badge badge-light border">' + esc(data) + '</span>';
         }
       },
       {
@@ -124,14 +132,14 @@ $(document).ready(function () {
         orderable: false,
         render: function (data) {
           if (!data) return '<span class="text-muted small">—</span>';
-          return '<code class="text-success" style="font-size:0.75rem;">' + data + '</code>';
+          return '<code class="text-success" style="font-size:0.75rem;">' + esc(data) + '</code>';
         }
       },
       {
         searchable: false,
         orderable: false,
         render: function (data, type, row) {
-          return '<button class="btn btn-sm btn-outline-secondary detail-btn" data-url="' + row.detail_url + '">Details</button>';
+          return '<button class="btn btn-sm btn-outline-secondary detail-btn" data-url="' + esc(row.detail_url) + '">Details</button>';
         }
       }
     ]
