@@ -16,7 +16,7 @@ from .views.sections import (
 from .views.resources import resources_list, resources_sync, resource_detail, resource_set_preferred, EthosResourceViewSet
 from .views.grade_push import grade_push_lookup
 from .views.settings_page import ethos_settings
-from .views.logs import logs_list, log_detail, EthosLogViewSet
+from .views.logs import logs_list, log_detail, log_copy, EthosLogViewSet
 from .views.messages import (
     messages_list, message_detail, message_dry_run, message_consume,
     EthosMessageViewSet,
@@ -55,6 +55,7 @@ urlpatterns = [
 
     path('logs/', user_passes_test(_has_cis_role, login_url='/')(logs_list), name='ethos_logs'),
     path('logs/<int:pk>/', user_passes_test(_has_cis_role, login_url='/')(log_detail), name='ethos_log_detail'),
+    path('logs/<int:pk>/copy/', user_passes_test(_has_cis_role, login_url='/')(log_copy), name='ethos_log_copy'),
 
     # Gated in the view by can_manage_settings (JSON 403, not a redirect).
     path('grade-push/lookup/', grade_push_lookup, name='grade_push_lookup'),

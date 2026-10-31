@@ -119,6 +119,7 @@ This registers:
 | `ce/ethos/resources/<pk>/set-preferred/` | `ethos:ethos_resource_set_preferred` | Set preferred Accept header |
 | `ce/ethos/logs/` | `ethos:ethos_logs` | API log list (DataTables) |
 | `ce/ethos/logs/<pk>/` | `ethos:ethos_log_detail` | Log detail |
+| `ce/ethos/logs/<pk>/copy/` | `ethos:ethos_log_copy` | Copy for Claude block (text/plain, CE only) |
 | `ce/ethos/api/ethos-resource/` | — | DRF endpoint for resource DataTables |
 | `ce/ethos/api/ethos-log/` | — | DRF endpoint for log DataTables |
 | `ce/ethos/academic_periods/lookup/` | `ethos:lookup_academic_period` | Look up period from SIS |
@@ -403,7 +404,7 @@ docker exec django_web_ewu python /app/webapp/manage.py db_worker
 - The term detail page (`/ce/term/<id>`) has a "Pull Sections from SIS" action that enqueues `import_sections_for_term` and polls for completion.
 - The academic year add page (`/ce/academic_year/add_new`) has a "Import from SIS" flow for looking up and creating periods from Ethos.
 - The resource browser at `/ce/ethos/resources` shows all available Ethos API resources with their supported methods and representations. Click a row to open the modal detail and set a preferred Accept header.
-- The API log viewer at `/ce/ethos/logs` shows every Ethos API call with request/response details accessible via modal. The ID column is sortable, and typing a log id in the search box finds that log (exact match, alongside the usual text search). The log detail (modal and full page) has a **Copy for Claude** button that copies the log id, time, campus, method + full URL, type, status, request headers/body and response body as one markdown block, ready to paste into a Claude Code chat.
+- The API log viewer at `/ce/ethos/logs` shows every Ethos API call with request/response details accessible via modal. The ID column is sortable, and typing a log id in the search box finds that log (exact match, alongside the usual text search). The log detail (modal and full page) has a **Copy for Claude** button that copies the log id, time, campus, method + full URL, type, status, request headers/body and response body as one markdown block, ready to paste into a Claude Code chat. The block is fetched on click from `ce/ethos/logs/<pk>/copy/` (CE only, campus scoped), opens with a line framing its contents as data, not instructions, and keeps every logged value inside code fences. **The bodies can hold student records protected by FERPA (names, IDs, dates of birth): paste them only into tools your institution approves for student data.**
 - The API Explorer at `/ce/ethos/status` allows admins to call any of the 44 registered Ethos methods interactively with optional `offset`/`limit` slicing.
 
 ## Standalone CLI (`ethos-sis`)

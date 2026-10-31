@@ -1,12 +1,14 @@
 {% comment %}
 "Copy for Claude" (package_ethos#12): one click puts the whole call, as markdown, on the
-clipboard. The text is built server-side (views.logs.log_copy_text) and autoescaped into a
-hidden textarea, so nothing is truncated. Used by the full page and the modal partial; the
-click handler is delegated and bound once, so the modal can be reloaded freely.
+clipboard. The text is built server-side (views.logs.log_copy_text) and fetched from the
+CE-only ethos:ethos_log_copy endpoint on click, so the page does not ship a second copy of
+a large body. ClipboardItem takes the pending fetch, which keeps the write inside the click's
+user gesture. Used by the full page and the modal partial; the click handler is delegated
+and bound once, so the modal can be reloaded freely.
 {% endcomment %}
-<textarea class="ethos-log-copy d-none" aria-hidden="true" readonly>{{ copy_text }}</textarea>
 <button type="button" class="btn btn-sm btn-outline-primary ethos-log-copy-btn"
-        title="Copy URL, method, request and response as markdown">
+        data-copy-url="{% url 'ethos:ethos_log_copy' log.pk %}"
+        title="Copy URL, method, request and response as markdown. The bodies can hold student records protected by FERPA: paste them only into tools approved for student data.">
   <i class="far fa-copy"></i>&nbsp;<span class="ethos-log-copy-label">Copy for Claude</span>
 </button>
 <script>
@@ -14,31 +16,51 @@ click handler is delegated and bound once, so the modal can be reloaded freely.
   if (window.ethosLogCopyBound) return;
   window.ethosLogCopyBound = true;
 
-  function fallbackCopy(text) {
+  function fetchText(url) {
+    return fetch(url, { credentials: 'same-origin', cache: 'no-store' }).then(function (resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    });
+  }
+
+  // Appended next to the button, not to <body>: inside a Bootstrap modal, enforceFocus
+  // would pull focus back from a textarea outside it and execCommand would copy nothing.
+  function fallbackCopy(text, anchor) {
     var ta = document.createElement('textarea');
     ta.value = text;
     ta.setAttribute('readonly', '');
     ta.style.position = 'fixed';
     ta.style.top = '-1000px';
-    document.body.appendChild(ta);
+    anchor.appendChild(ta);
     ta.select();
     var ok = false;
     try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
-    document.body.removeChild(ta);
+    anchor.removeChild(ta);
     return ok ? Promise.resolve() : Promise.reject();
+  }
+
+  function copy(url, anchor) {
+    var secure = navigator.clipboard && window.isSecureContext;
+    if (secure && window.ClipboardItem && navigator.clipboard.write) {
+      var blob = fetchText(url).then(function (text) {
+        return new Blob([text], { type: 'text/plain' });
+      });
+      return navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]).catch(function () {
+        return fetchText(url).then(function (text) { return navigator.clipboard.writeText(text); });
+      });
+    }
+    return fetchText(url).then(function (text) {
+      return secure
+        ? navigator.clipboard.writeText(text).catch(function () { return fallbackCopy(text, anchor); })
+        : fallbackCopy(text, anchor);
+    });
   }
 
   document.addEventListener('click', function (event) {
     var btn = event.target.closest('.ethos-log-copy-btn');
     if (!btn) return;
-    var source = btn.parentNode.querySelector('.ethos-log-copy');
-    if (!source) return;
-    var text = source.value;
-    var copied = (navigator.clipboard && window.isSecureContext)
-      ? navigator.clipboard.writeText(text).catch(function () { return fallbackCopy(text); })
-      : fallbackCopy(text);
     var label = btn.querySelector('.ethos-log-copy-label');
-    copied.then(function () {
+    copy(btn.getAttribute('data-copy-url'), btn.parentNode).then(function () {
       label.textContent = 'Copied';
     }, function () {
       label.textContent = 'Copy failed';
