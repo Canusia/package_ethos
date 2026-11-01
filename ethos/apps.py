@@ -37,6 +37,9 @@ class EthosConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'ethos'
 
+    def ready(self):
+        from . import menu  # noqa: F401  sidebar items (cis.menu_registry)
+
     CONFIGURATORS = [
         {'app': 'ethos', **_CONSUME_CONFIGURATOR},
         {'app': 'ethos', **_GRADE_PUSH_CONFIGURATOR},
@@ -49,6 +52,9 @@ class DevEthosConfig(AppConfig):
     """Development — git submodule."""
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'ethos.ethos'
+
+    def ready(self):
+        from . import menu  # noqa: F401  sidebar items (cis.menu_registry)
 
     CONFIGURATORS = [
         {'app': 'ethos.ethos', **_CONSUME_CONFIGURATOR},
