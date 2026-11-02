@@ -140,6 +140,29 @@ class SectionCommandOverrideTests(TestCase):
         client.get_sections.assert_not_called()
         self.assertIn('section_created', out.getvalue())
 
+    def test_create_runs_the_hook_inside_the_terms_campus(self):
+        """The README promises the hook runs in the term's campus context; the
+        command must set it like the task does (multi-campus tenants)."""
+        from cis.campus_context import _current
+        seen = []
+
+        class _CampusImporter:
+            def fetch_and_import_sections(self, period_id, term):
+                seen.append(_current.get())
+                return {'section_created': 1}
+
+        campus = SimpleNamespace(pk=7, code='B')
+        client = MagicMock()
+        client.get_academic_period_id.return_value = 'p-1'
+        term = SimpleNamespace(pk=1, academic_year=SimpleNamespace(campus=campus))
+        with patch(f'{P}.management.commands.import_sections_from_ethos.Ethos', return_value=client), \
+             patch('cis.models.term.Term.objects.filter') as flt, \
+             patch('cis.services.tenant_services.get_tenant_service',
+                   return_value=_service(_CampusImporter)):
+            flt.return_value.first.return_value = term
+            call_command('import_sections_from_ethos', '202620', create=True, stdout=StringIO())
+        self.assertEqual(seen, [campus])
+
     def _create(self, importer_cls, **options):
         client = MagicMock()
         client.get_academic_period_id.return_value = 'p-1'

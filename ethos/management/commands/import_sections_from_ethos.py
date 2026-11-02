@@ -112,7 +112,12 @@ class Command(EthosCommand):
                 self.stdout.write(self.style.WARNING(
                     "--no-certificates is ignored: the tenant's importer does not take skip_certificates."))
             self.stdout.write("Running the tenant's term import...")
-            counts = run_tenant_hook(hook, period_id, term, **kwargs)
+            # The task runs the hook inside the term's campus; so does the command,
+            # or a multi-campus tenant's importer reads no (or the wrong) campus.
+            from cis.campus_context import campus_context
+            campus = getattr(getattr(term, 'academic_year', None), 'campus', None)
+            with campus_context(campus):
+                counts = run_tenant_hook(hook, period_id, term, **kwargs)
             if not counts:
                 self.stdout.write(self.style.WARNING("The tenant's import returned no counts."))
             for key, value in counts.items():
