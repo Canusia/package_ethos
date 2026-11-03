@@ -258,7 +258,7 @@ The `Ethos` class composes 15 mixins:
 | `GradesMixin` | `grades.py` | `get_student_grades`, `get_grade_definitions`, `get_grade_modes`, `get_student_gpa`, `get_section_grade_types`, `submit_student_grade` |
 | `HoldsMixin` | `holds.py` | `get_person_holds`, `get_person_hold`, `get_hold_type_codes`, `get_person_hold_types`, `release_person_hold` |
 | `ReferenceMixin` | `reference.py` | `get_academic_levels`, `get_instructional_methods`, `get_grade_schemes`, `get_academic_catalogs`, `get_educational_institution`, `get_educational_institutions` |
-| `PersonMixin` | `person.py` | `get_or_create_person`, `update_person`, `get_person`, `get_bannerid`, `create_external_ed`, `send_emergency_contact`, `put_misc_info` |
+| `PersonMixin` | `person.py` | `get_or_create_person`, `update_person`, `get_person`, `get_bannerid`, `create_external_ed`, `send_emergency_contact`, `list_emergency_contacts`, `create_emergency_contact`, `update_emergency_contact`, `put_misc_info` (and module-level `split_phone`) |
 | `AcademicMixin` | `academic.py` | `create_admission_application`, `accept_admission_decision`, `submit_academic_program`, `get_academic_programs`, `get_sites` |
 | `AcademicPeriodsMixin` | `academic_periods.py` | `get_academic_periods`, `get_academic_period_id`, `get_child_academic_periods` |
 | `RegistrationMixin` | `registration.py` | `sendRegistrationHold`, `mirror_registration`, `mirror_linked_registrations`, `update_registration`, `update_registration_status` |

@@ -19,6 +19,7 @@ Ellucian Ethos SIS integration client for MyCE. Provides Django views, a Python 
    - [Courses](#courses-client)
    - [Sections](#sections-client)
    - [Persons](#persons-client)
+   - [Emergency Contacts (Banner SPAIDEN)](#emergency-contacts-client-banner-spaiden)
    - [Sites & Programs](#sites--programs-client)
 5. [Data Structures](#data-structures)
 6. [Pagination](#pagination)
@@ -833,6 +834,74 @@ if len(matches) != 1:
 > **Note:** confirm against your own Ethos instance that `dateOfBirth` is actually
 > applied as a persons filter. A filter that is accepted but silently ignored returns an
 > unfiltered result set, which looks like a match.
+
+---
+
+### Emergency Contacts Client (Banner SPAIDEN)
+
+Banner's SPAIDEN Business API, `general-person-identification-emergency-contact` (table
+SPREMRG). Unlike the EEDM `person-emergency-contacts` endpoint behind
+`send_emergency_contact`:
+- the phone is split into area, number and extension;
+- a row can be updated in place.
+
+`send_emergency_contact` is unchanged for tenants on the EEDM endpoint.
+
+**Banner only:** Colleague tenants can't use these methods. The API user needs SPAIDEN access, and possibly SPAPERS.
+
+| | |
+|---|---|
+| Key | Banner ID (`student.user.psid`), not the person GUID. If the student has no Banner ID, nothing is sent and the log is `None`. |
+| Media types | GET and PUT `application/vnd.hedtech.integration.v1.1.0+json`; POST `v1.0.0`, the only version the spec offers for POST |
+| Tenant owns | `reltCode` (each school's STVRELT), whether to update or add, and what it last sent |
+
+```mermaid
+flowchart LR
+    T[tenant send step] --> L[list_emergency_contacts]
+    L -->|matching row| U[update_emergency_contact]
+    L -->|none| C[create_emergency_contact]
+```
+
+#### `split_phone(value)`
+
+Module-level helper in `library/person.py`. Formatting is dropped.
+- 10 digits, or 11 starting with `1`, becomes `(area, number)`.
+- Anything else becomes `('', digits[:12])`, because SPREMRG_PHONE_NUMBER holds 12 characters.
+
+```python
+split_phone('(518) 743-2557')  # ('518', '7432557')
+split_phone('743-2557')        # ('', '7432557')
+```
+
+#### `list_emergency_contacts(student, **kwargs)` → `(rows, ok, log)`
+
+Sends `GET /api/general-person-identification-emergency-contact?id=<bannerId>`.
+- Each row is a SPREMRG dict with `priority`, `firstName`, `lastName`, `mi`, `phoneArea`, `phoneNumber`, `phoneExt`, `ctryCodePhone`, `reltCode`, `reltDescription`, the address fields, `activityDate` and `userId`.
+- Banner leaves empty fields out of each row.
+- A failed request or a body that isn't a list gives `([], False, log)`.
+
+#### `create_emergency_contact(student, fields, priority='1', **kwargs)` → `(priority or None, log)`
+
+Sends a `POST` with `{'id': bannerId, 'priority': '<priority>', **fields}`.
+- Empty fields are left out.
+- `fields` can't override `id` or `priority`.
+- Banner requires `firstName` and `lastName`.
+
+```python
+area, number = split_phone(student.parent_phone)
+client.create_emergency_contact(student, {
+    'firstName': 'Pat', 'lastName': 'Lee', 'phoneArea': area,
+    'phoneNumber': number, 'reltCode': 'T'})
+```
+
+#### `update_emergency_contact(student, existing, fields, **kwargs)` → `(priority or None, log)`
+
+Sends a `PUT` over `existing`, which is a row from `list_emergency_contacts`.
+- Banner picks the row by `criteria.priority`, `criteria.firstName` and `criteria.lastName`, which are always taken from `existing`.
+- The unprefixed fields are the new values. Every field passed is sent, empty ones too, so `'phoneExt': ''` clears a stale extension.
+- `priority`, `firstName` and `lastName` are required by Banner, and default to the existing row's values when `fields` leaves them out.
+
+Verified live on SCCC's Banner (2026-11-03): a PUT that splits the phone and clears the extension. Not yet verified live: POST, and a PUT that renames the contact.
 
 ---
 

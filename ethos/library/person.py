@@ -13,6 +13,30 @@ from .base import EthosBase
 logger = logging.getLogger(__name__)
 
 
+#: Banner's SPAIDEN emergency-contact Business API (table SPREMRG), not EEDM (#15).
+EMERGENCY_CONTACT_RESOURCE = 'general-person-identification-emergency-contact'
+#: GET and PUT speak v1.1.0; the spec offers POST only as v1.0.0.
+EMERGENCY_CONTACT_MEDIA = 'application/vnd.hedtech.integration.v1.1.0+json'
+EMERGENCY_CONTACT_POST_MEDIA = 'application/vnd.hedtech.integration.v1.0.0+json'
+#: SPREMRG_PHONE_NUMBER length.
+SPREMRG_PHONE_MAX = 12
+
+
+def split_phone(value):
+    """``(area, number)`` for a SPREMRG row.
+
+    A US number (10 digits, or 11 with a leading ``1``) splits into a 3-digit
+    area code and a 7-digit number. Anything else is ``('', digits)`` cut to
+    the 12 characters SPREMRG_PHONE_NUMBER holds. Formatting is dropped.
+    """
+    digits = ''.join(ch for ch in str(value or '') if ch.isdigit())
+    if len(digits) == 11 and digits.startswith('1'):
+        digits = digits[1:]
+    if len(digits) == 10:
+        return digits[:3], digits[3:]
+    return '', digits[:SPREMRG_PHONE_MAX]
+
+
 class PersonMixin(EthosBase):
     """Person-related Ethos operations: create, update, match, lookup."""
 
@@ -585,6 +609,99 @@ class PersonMixin(EthosBase):
             return (id, sis_log)
 
         return (None, sis_log)
+
+    # -- SPAIDEN emergency contacts (Banner Business API, #15) -----------------
+    # Keyed by Banner ID (student.user.psid), not the person GUID. The tenant
+    # owns the relationship code (its STVRELT), whether to update or add, and
+    # what it last sent; these methods only speak the API. Colleague tenants
+    # can't use them.
+
+    def _emergency_contact_request(self, method, student, data, message_type,
+                                   query='', **kwargs):
+        media = EMERGENCY_CONTACT_POST_MEDIA if method == 'POST' else EMERGENCY_CONTACT_MEDIA
+        headers = {'Accept': media}
+        if data is not None:
+            headers['Content-Type'] = media
+        return self._api_request(
+            method, f'{self.URL}/api/{EMERGENCY_CONTACT_RESOURCE}{query}', message_type,
+            description=f'{student} - {student.id}',
+            data=data, headers=headers, **kwargs)
+
+    @staticmethod
+    def _banner_id(student):
+        return (getattr(student.user, 'psid', None) or '').strip()
+
+    def list_emergency_contacts(self, student, **kwargs):
+        """GET the person's SPREMRG rows. Returns ``(rows, ok, log)``.
+
+        Each row is a dict: ``priority``, ``firstName``, ``lastName``, ``mi``,
+        ``phoneArea``, ``phoneNumber``, ``phoneExt``, ``reltCode``, address
+        fields... (Banner omits empty ones). A student without a Banner ID is
+        ``([], False, None)`` and nothing is sent.
+        """
+        banner_id = self._banner_id(student)
+        if not banner_id:
+            return [], False, None
+        resp, sis_log = self._emergency_contact_request(
+            'GET', student, None, 'emergency_contact_lookup',
+            query=f'?{urlencode({"id": banner_id})}', **kwargs)
+        if not resp.ok:
+            return [], False, sis_log
+        try:
+            rows = resp.json()
+        except ValueError:
+            return [], False, sis_log
+        if not isinstance(rows, list):
+            return [], False, sis_log
+        return [r for r in rows if isinstance(r, dict)], True, sis_log
+
+    def create_emergency_contact(self, student, fields, priority='1', **kwargs):
+        """POST a new SPREMRG row at ``priority``. Returns ``(priority or None, log)``.
+
+        ``fields`` are the row's values (``firstName``, ``lastName``,
+        ``phoneArea``, ``phoneNumber``, ``phoneExt``, ``reltCode``, ...); empty
+        ones are left out. Banner requires ``firstName`` and ``lastName``.
+        """
+        banner_id = self._banner_id(student)
+        if not banner_id:
+            return None, None
+        body = {'id': banner_id, 'priority': str(priority)}
+        body.update({k: v for k, v in (fields or {}).items()
+                     if v not in (None, '') and k not in ('id', 'priority')})
+        resp, sis_log = self._emergency_contact_request(
+            'POST', student, json.dumps(body), 'emergency_contact_create', **kwargs)
+        return (str(priority) if resp.ok else None), sis_log
+
+    def update_emergency_contact(self, student, existing, fields, **kwargs):
+        """PUT ``fields`` over ``existing`` (a row from ``list_emergency_contacts``).
+
+        Banner picks the row by ``criteria.priority/firstName/lastName`` (taken
+        from ``existing``). Every given field is sent, empty ones too, so a
+        stale extension or number is cleared. ``priority``, ``firstName`` and
+        ``lastName`` default to the existing row's. Returns
+        ``(priority or None, log)``.
+        """
+        banner_id = self._banner_id(student)
+        if not banner_id:
+            return None, None
+        existing = existing or {}
+        criteria = {
+            'priority': str(existing.get('priority') or ''),
+            'firstName': existing.get('firstName') or '',
+            'lastName': existing.get('lastName') or '',
+        }
+        body = {'id': banner_id}
+        body.update({f'criteria.{k}': v for k, v in criteria.items()})
+        body.update(criteria)
+        body.update({k: ('' if v is None else v) for k, v in (fields or {}).items()
+                     if k != 'id' and not k.startswith('criteria.')})
+        for key in ('priority', 'firstName', 'lastName'):
+            if not body.get(key):
+                body[key] = criteria[key]
+        body['priority'] = str(body['priority'])
+        resp, sis_log = self._emergency_contact_request(
+            'PUT', student, json.dumps(body), 'emergency_contact_update', **kwargs)
+        return (body['priority'] if resp.ok else None), sis_log
 
     def put_misc_info(self, student, **kwargs):
         """Update miscellaneous applicant items in Ethos."""
