@@ -22,6 +22,26 @@ This package is designed for use as both a **git submodule** (development) and a
 - Django 5.2+
 - `django-tasks` with `DatabaseBackend`
 - Access to the Ellucian Ethos Integration API (`COLLEAGUE_AUTH_CODE` in Django settings)
+- `myce_cis>=0.1.7a` (v1.x)
+
+## Versioning
+
+**Pin `v1.x.y` tags only. The CalVer `v2026.x.y` tags are retired.**
+
+The `v1.x` line continues the CalVer line; it does not restart it:
+
+```mermaid
+flowchart LR
+    A["v2026.0.x … v2026.8.2<br/>(retired)"] --> B[v1.1.0] --> C[v1.2.0] --> D[v1.3.x] --> E[v1.4.0 …]
+```
+
+- `v1.1.0` is the release after `v2026.8.2` and is built on it. Every `v1.x` release has everything in every `v2026.x` release.
+- **Don't choose a tag by version sorting.** `2026.8.2` sorts above `1.4.0` (`git tag --sort=-v:refname`, pip, Dependabot), so a "highest version" pick lands on the retired line. Use the GitHub release marked **Latest**, or `git tag --sort=-creatordate`.
+- **Moving a pin from `v2026.*` to `v1.x`** is a normal upgrade. pip installs it because the declared version changes, and a fresh Docker build is unaffected.
+  - From `v2026.8.x`, the only new migration is `0007_ethosmessage_sis_message_id_text`.
+  - From older tags, run `migrate` (up to `0007`) and read the release notes between the two tags.
+  - `v1.x` needs `myce_cis>=0.1.7a`. A branch with an older or in-tree `cis` stays on its current pin until `cis` is upgraded. Don't move it to another `v2026.*` tag in the meantime.
+- The `v2026.*` tags will be deleted once no tenant branch pins them.
 
 ## Installation
 
