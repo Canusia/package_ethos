@@ -70,7 +70,7 @@ $(document).ready(function () {
     columns: [
       { render: function (data) { return '<small>' + esc(data) + '</small>'; } },
       { render: function (data) { return data ? '<small>' + esc(data) + '</small>' : '&mdash;'; } },
-      { render: function (data) { return '<code style="font-size:0.8rem;">' + esc(data) + '</code>'; } },
+      { render: function (data, type, row) { return '<code style="font-size:0.8rem;">' + esc(data) + '</code>' + (row.no_campus ? ' <span class="badge badge-warning" title="No campus: shown to superusers only">No campus</span>' : ''); } },
       { render: function (data) { return '<span class="text-muted small">' + esc(data) + '</span>'; } },
       {
         orderable: false,

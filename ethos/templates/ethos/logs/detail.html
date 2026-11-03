@@ -11,6 +11,7 @@
       <h1 class="h3 mt-1 mb-0 text-gray-800">
         <span class="badge badge-{% if log.method == 'GET' %}success{% elif log.method == 'POST' %}primary{% elif log.method == 'PUT' %}warning{% else %}secondary{% endif %} mr-1">{{ log.method }}</span>
         <code>{{ log.path }}</code>
+        {% if no_campus %}<span class="badge badge-warning ml-1" title="Written before this deployment had campuses, or outside a campus. Shown to superusers only.">No campus</span>{% endif %}
       </h1>
       <small class="text-muted">#{{ log.pk }} &nbsp;&middot;&nbsp; {{ log.sent_on|date:"m/d/Y g:i:s A" }} &nbsp;&middot;&nbsp; {{ log.message_type }}</small>
     </div>

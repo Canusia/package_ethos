@@ -75,7 +75,7 @@ $(document).ready(function () {
           return '<span class="badge badge-' + cls + '">' + esc(data) + '</span>';
         }
       },
-      { render: function (data) { return '<code style="font-size:0.8rem;">' + esc(data) + '</code>'; } },
+      { render: function (data, type, row) { return '<code style="font-size:0.8rem;">' + esc(data) + '</code>' + (row.no_campus ? ' <span class="badge badge-warning" title="No campus: shown to superusers only">No campus</span>' : ''); } },
       { render: function (data) { return '<span class="text-muted small">' + esc(data) + '</span>'; } },
       {
         searchable: false,

@@ -1,6 +1,6 @@
 <div class="modal-header">
   <div>
-    <h5 class="modal-title mb-0"><code>{{ resource.name }}</code></h5>
+    <h5 class="modal-title mb-0"><code>{{ resource.name }}</code> {% if no_campus %}<span class="badge badge-warning ml-1" title="Written before this deployment had campuses, or outside a campus. Shown to superusers only.">No campus</span>{% endif %}</h5>
     <p class="text-muted small mb-0">
       {{ resource.application.name }}
       {% for item in resource.application.about %}
@@ -74,6 +74,8 @@
             </td>
 
             <td style="white-space:nowrap;">
+              {% if no_campus %}{% if resource.preferred_representation_id == rep.pk %}<span class="badge badge-success">Active</span>{% else %}<span class="text-muted">—</span>{% endif %}
+              {% else %}
               {% if resource.preferred_representation_id == rep.pk %}
               <span class="badge badge-success">Active</span>
               <button class="btn btn-sm btn-outline-secondary ml-1 js-set-preferred"
@@ -91,6 +93,7 @@
                       data-reload-url="{% url 'ethos:ethos_resource_detail' resource.pk %}">
                 Set
               </button>
+              {% endif %}
               {% endif %}
             </td>
 

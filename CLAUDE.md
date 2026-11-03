@@ -375,6 +375,7 @@ in the host repo (package_ethos#4).
 - **Commands** are `EthosCommand`s (`ethos/command_base.py`, a `cis` `CampusCommand` that turns
   `EthosNotConfigured`/`NoCampusContext` into `CommandError`). In multi-campus mode they take
   `--campus` (required in multi-campus mode).
+- **Rows with no campus** (written before `0006_campus`, or outside a campus context) belong to no campus, so `for_campus` hides them from everyone except superusers (#14). Read-only views pass `user=request.user`, so a superuser sees them next to the current campus's rows, each with a "No campus" badge (`no_campus` in the list feeds). The actions that change something stay limited to the current campus, even for a superuser: Consume and Set/Clear preferred. A campus-less row could belong to either college, so give it a campus first with `assign_ethos_campus`. `process_ethos_messages --campus X` never picks such rows up either.
 - **`assign_ethos_campus --campus X [--dry-run] [--batch-size N]`** gives the pre-existing
   campus-less cursor, applications, messages and logs to campus X. Run once when turning
   `MULTI_CAMPUS` on. Rows already on a campus are never touched; an application id the campus
@@ -394,7 +395,7 @@ in the host repo (package_ethos#4).
 | `EthosNotConfigured: No Ethos credentials for campus X` | No `SECRETS['ethos'][X]` entry, or an empty `auth_code` | Add the entry |
 | `NoCampusContext` from `Ethos()` | Multi-campus code ran with no campus (task or script) | Pass `campus=` from the record, or run as a `CampusCommand` |
 | `poll_ethos_messages` refuses to start | No cursor row for that campus yet | Deployment had a campus-less cursor: `assign_ethos_campus --campus X`. New campus: `poll_ethos_messages --campus X --from-id N` once |
-| Ethos pages are empty after enabling multi-campus | Existing rows have a null campus | `assign_ethos_campus --campus X` |
+| Ethos pages are empty after enabling multi-campus (superusers see the rows with a "No campus" badge) | Existing rows have a null campus | `assign_ethos_campus --campus X` |
 
 ## Technical Debt
 

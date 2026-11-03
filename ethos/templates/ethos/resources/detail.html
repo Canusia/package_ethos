@@ -15,6 +15,7 @@
         </a>
         <h1 class="h3 mt-1 mb-0 text-gray-800">
           <code>{{ resource.name }}</code>
+          {% if no_campus %}<span class="badge badge-warning ml-1" title="Written before this deployment had campuses, or outside a campus. Shown to superusers only.">No campus</span>{% endif %}
         </h1>
         <p class="text-muted mb-0">
           {{ resource.application.name }}
@@ -118,6 +119,8 @@
 
                 <!-- Preferred -->
                 <td>
+                  {% if no_campus %}{% if resource.preferred_representation_id == rep.pk %}<span class="badge badge-success">Active</span>{% else %}<span class="text-muted">—</span>{% endif %}
+                  {% else %}
                   {% if resource.preferred_representation_id == rep.pk %}
                   <span class="badge badge-success">Active</span>
                   <form method="post" action="{% url 'ethos:ethos_resource_set_preferred' resource.pk %}" class="d-inline ml-1">
@@ -131,6 +134,7 @@
                     <input type="hidden" name="representation_id" value="{{ rep.pk }}">
                     <button type="submit" class="btn btn-sm btn-outline-primary" style="font-size:0.75rem;">Set</button>
                   </form>
+                  {% endif %}
                   {% endif %}
                 </td>
 

@@ -14,7 +14,7 @@ from rest_framework import viewsets
 from ..models import EthosApplication, EthosRepresentation, EthosResource
 from ..serializers import EthosResourceSerializer
 from ._client import ethos_client_or_error
-from ..campus import for_campus
+from ..campus import for_campus, has_no_campus
 from ..permissions import HasCERole
 
 logger = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ class EthosResourceViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         qs = for_campus(
             EthosResource.objects.select_related('application', 'preferred_representation').prefetch_related('representations'),
-            path='application__campus',
+            path='application__campus', user=self.request.user,
         )
         app = self.request.GET.get('application')
         if app:
@@ -167,7 +167,7 @@ def resource_detail(request, pk):
     resource = get_object_or_404(
         for_campus(
             EthosResource.objects.select_related('application').prefetch_related('representations'),
-            path='application__campus',
+            path='application__campus', user=request.user,
         ),
         pk=pk,
     )
@@ -176,4 +176,7 @@ def resource_detail(request, pk):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         else 'ethos/resources/detail.html'
     )
-    return render(request, template, {'resource': resource})
+    return render(request, template, {
+        'resource': resource,
+        'no_campus': has_no_campus(resource.application),
+    })

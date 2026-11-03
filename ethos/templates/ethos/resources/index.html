@@ -103,7 +103,7 @@ $(document).ready(function () {
     columns: [
       {
         render: function (data, type, row) {
-          return '<code>' + esc(data) + '</code>';
+          return '<code>' + esc(data) + '</code>' + (row.no_campus ? ' <span class="badge badge-warning" title="No campus: shown to superusers only">No campus</span>' : '');
         }
       },
       { render: function (data) { return esc(data); } },

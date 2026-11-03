@@ -17,7 +17,7 @@ try:  # myce_cis >= 0.1.44a: search and order only on allowed paths (package-cis
 except ImportError:  # older cis, or no cis
     from rest_framework_datatables.filters import DatatablesFilterBackend as _DatatablesBackend
 
-from ..campus import for_campus
+from ..campus import for_campus, has_no_campus
 from ..models import EthosLog
 from ..permissions import HasCERole
 from ..serializers import EthosLogSerializer
@@ -54,7 +54,7 @@ class EthosLogViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [EthosLogFilterBackend]
 
     def get_queryset(self):
-        qs = for_campus(EthosLog.objects.all())
+        qs = for_campus(EthosLog.objects.all(), user=self.request.user)
         message_type = self.request.GET.get('message_type')
         if message_type:
             qs = qs.filter(message_type=message_type)
@@ -145,7 +145,7 @@ def log_copy_text(log):
 
 @xframe_options_exempt
 def log_detail(request, pk):
-    log = get_object_or_404(for_campus(EthosLog.objects.all()), pk=pk)
+    log = get_object_or_404(for_campus(EthosLog.objects.all(), user=request.user), pk=pk)
     template = (
         'ethos/logs/detail_partial.html'
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -153,6 +153,7 @@ def log_detail(request, pk):
     )
     return render(request, template, {
         'log': log,
+        'no_campus': has_no_campus(log),
         'log_url': unquote(log.url or ''),
         'response_body_fmt': _parse_response_body(log.response_body),
     })
@@ -161,7 +162,7 @@ def log_detail(request, pk):
 def log_copy(request, pk):
     """The Copy for Claude block as plain text, fetched when the button is clicked, so
     the detail page does not ship a second copy of a large body."""
-    log = get_object_or_404(for_campus(EthosLog.objects.all()), pk=pk)
+    log = get_object_or_404(for_campus(EthosLog.objects.all(), user=request.user), pk=pk)
     response = HttpResponse(log_copy_text(log), content_type='text/plain; charset=utf-8')
     response['X-Content-Type-Options'] = 'nosniff'
     response['Cache-Control'] = 'no-store'

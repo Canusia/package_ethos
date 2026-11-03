@@ -10,7 +10,7 @@ from rest_framework import viewsets
 
 from cis.menu import cis_menu, draw_menu
 
-from ..campus import for_campus
+from ..campus import for_campus, has_no_campus
 from ..permissions import HasCERole  # noqa: F401  (re-exported: old import path)
 from ..models import EthosMessage
 from ..serializers import EthosMessageSerializer
@@ -27,7 +27,7 @@ class EthosMessageViewSet(viewsets.ReadOnlyModelViewSet):
         # DataTables' own search: they let the list be linked to directly, e.g.
         # "show me everything that failed" or "just section-registrations",
         # without the operator having to type into the search box.
-        qs = for_campus(EthosMessage.objects.all())
+        qs = for_campus(EthosMessage.objects.all(), user=self.request.user)
         resource = self.request.GET.get('resource_name')
         if resource:
             qs = qs.filter(resource_name=resource)
@@ -47,12 +47,13 @@ def messages_list(request):
 
 @xframe_options_exempt
 def message_detail(request, pk):
-    message = get_object_or_404(for_campus(EthosMessage.objects.all()), pk=pk)
+    message = get_object_or_404(for_campus(EthosMessage.objects.all(), user=request.user), pk=pk)
     template = ('ethos/messages/detail_partial.html'
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest'
                 else 'ethos/messages/detail.html')
     return render(request, template, {
         'message': message,
+        'no_campus': has_no_campus(message),
         'payload_fmt': json.dumps(message.payload, indent=4, ensure_ascii=False),
     })
 
@@ -63,7 +64,7 @@ def message_dry_run(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
-    message = get_object_or_404(for_campus(EthosMessage.objects.all()), pk=pk)
+    message = get_object_or_404(for_campus(EthosMessage.objects.all(), user=request.user), pk=pk)
     error = None
     try:
         plan = consume_message(message, dry_run=True)

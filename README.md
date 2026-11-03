@@ -242,7 +242,7 @@ python manage.py assign_ethos_campus --campus EWU
 | `EthosNotConfigured: No Ethos credentials for campus X` | Add `SECRETS['ethos'][X]` with a non-empty `auth_code` |
 | `NoCampusContext` from `Ethos()` | Pass `campus=` or run as a campus-scoped command |
 | `poll_ethos_messages` refuses to start (`CursorNotInitialised`) | Had a campus-less cursor: `assign_ethos_campus --campus X` (adopts it). New campus: `poll_ethos_messages --campus X --from-id N` once |
-| Ethos pages empty after enabling multi-campus | `assign_ethos_campus --campus X` |
+| Ethos pages empty after enabling multi-campus (superusers see the rows, marked "No campus") | `assign_ethos_campus --campus X`; Consume and Set preferred stay off for those rows until it runs |
 
 ---
 

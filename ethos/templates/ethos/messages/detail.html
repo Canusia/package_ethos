@@ -11,6 +11,7 @@
       <h1 class="h3 mt-1 mb-0 text-gray-800">
         <span class="badge badge-secondary mr-1">#{{ message.queue_id }}</span>
         <code>{{ message.resource_name }}</code>
+        {% if no_campus %}<span class="badge badge-warning ml-1" title="Written before this deployment had campuses, or outside a campus. Shown to superusers only.">No campus</span>{% endif %}
       </h1>
       <small class="text-muted">{{ message.published_on|date:"m/d/Y g:i:s A" }} &nbsp;&middot;&nbsp; {{ message.operation }}</small>
     </div>
@@ -20,11 +21,15 @@
         {% csrf_token %}
         <button type="submit" class="btn btn-outline-secondary btn-sm">Dry run</button>
       </form>
+      {% if no_campus %}
+      <span class="text-muted small ml-1">Consume is off: give this message a campus first (<code>assign_ethos_campus --campus X</code>).</span>
+      {% else %}
       <form method="post" action="{% url 'ethos:ethos_message_consume' message.pk %}"
             class="d-inline js-plan-form">
         {% csrf_token %}
         <button type="submit" class="btn btn-primary btn-sm">Consume</button>
       </form>
+      {% endif %}
     </div>
   </div>
 

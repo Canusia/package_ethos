@@ -3,9 +3,17 @@ from urllib.parse import unquote
 from rest_framework import serializers
 
 from .models import EthosLog, EthosResource, EthosMessage
+from .campus import has_no_campus
 
 
-class EthosResourceSerializer(serializers.ModelSerializer):
+class NoCampusMixin(serializers.Serializer):
+    """`no_campus`: a multi-campus row with no campus, which only superusers see (#14)."""
+    no_campus = serializers.SerializerMethodField()
+    def get_no_campus(self, obj):
+        return has_no_campus(obj)
+
+
+class EthosResourceSerializer(NoCampusMixin, serializers.ModelSerializer):
     application_name = serializers.CharField(source='application.name', read_only=True)
     methods = serializers.SerializerMethodField()
     representation_count = serializers.SerializerMethodField()
@@ -14,8 +22,8 @@ class EthosResourceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EthosResource
-        fields = ['id', 'name', 'application_name', 'methods', 'representation_count', 'preferred_accept', 'detail_url']
-        datatables_always_serialize = ['id', 'detail_url']
+        fields = ['id', 'name', 'application_name', 'methods', 'representation_count', 'preferred_accept', 'detail_url', 'no_campus']
+        datatables_always_serialize = ['id', 'detail_url', 'no_campus']
 
     def get_methods(self, obj):
         seen = set()
@@ -35,11 +43,14 @@ class EthosResourceSerializer(serializers.ModelSerializer):
             return obj.preferred_representation.x_media_type
         return None
 
+    def get_no_campus(self, obj):
+        return has_no_campus(obj.application) if obj.application_id else False
+
     def get_detail_url(self, obj):
         return f'/ce/ethos/resources/{obj.pk}/'
 
 
-class EthosLogSerializer(serializers.ModelSerializer):
+class EthosLogSerializer(NoCampusMixin, serializers.ModelSerializer):
     sent_on = serializers.DateTimeField(format='%Y-%m-%d %I:%M %p')
     success = serializers.BooleanField(read_only=True)
     path    = serializers.SerializerMethodField()
@@ -55,12 +66,12 @@ class EthosLogSerializer(serializers.ModelSerializer):
         model = EthosLog
         fields = [
             'id', 'sent_on', 'method', 'path', 'url',
-            'message_type', 'description', 'response_status', 'success',
+            'message_type', 'description', 'response_status', 'success', 'no_campus',
         ]
-        datatables_always_serialize = ['id']
+        datatables_always_serialize = ['id', 'no_campus']
 
 
-class EthosMessageSerializer(serializers.ModelSerializer):
+class EthosMessageSerializer(NoCampusMixin, serializers.ModelSerializer):
     published_on = serializers.DateTimeField(format='%Y-%m-%d %I:%M %p', read_only=True)
     consumed_at  = serializers.DateTimeField(format='%Y-%m-%d %I:%M %p', read_only=True)
     status_reason = serializers.CharField(read_only=True)
@@ -69,5 +80,5 @@ class EthosMessageSerializer(serializers.ModelSerializer):
         model = EthosMessage
         fields = ['id', 'queue_id', 'published_on', 'resource_name', 'resource_id',
                   'operation', 'status_reason', 'status', 'action', 'consumed_at',
-                  'target_label']
-        datatables_always_serialize = ['id']
+                  'target_label', 'no_campus']
+        datatables_always_serialize = ['id', 'no_campus']
