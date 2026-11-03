@@ -60,7 +60,10 @@ def message_detail(request, pk):
 
 @xframe_options_exempt
 def message_dry_run(request, pk):
-    """Render what consuming this message WOULD do. Writes nothing."""
+    """Render what consuming this message WOULD do. Changes no records.
+
+    Any Ethos lookup the handler makes is still logged to EthosLog.
+    """
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
@@ -75,8 +78,13 @@ def message_dry_run(request, pk):
         # bubble up into a Django 500 page.
         plan = None
         error = str(exc)
+    # A superuser may dry-run a message with no campus (#14). Its handler runs in
+    # the current campus context, so any Ethos lookup uses this campus's
+    # credentials (and writes an EthosLog row); the panel says so.
     return render(request, 'ethos/messages/_plan.html', {
         'message': message, 'plan': plan, 'dry_run': True, 'error': error,
+        'no_campus': has_no_campus(message),
+        'current_campus': _current_campus_name(),
     })
 
 
@@ -97,3 +105,9 @@ def message_consume(request, pk):
     return render(request, 'ethos/messages/_plan.html', {
         'message': message, 'plan': plan, 'dry_run': False,
     })
+
+
+def _current_campus_name():
+    from cis.campus_context import current_campus_or_none
+    campus = current_campus_or_none()
+    return str(campus) if campus else ''

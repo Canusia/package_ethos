@@ -612,6 +612,9 @@ class PersonMixin(EthosBase):
 
     # -- SPAIDEN emergency contacts (Banner Business API, #15) -----------------
     # Keyed by Banner ID (student.user.psid), not the person GUID. The tenant
+    # A network error (requests.RequestException, e.g. a timeout) propagates,
+    # as it does from every other client method; an HTTP error returns ok=False
+    # / None with the log.
     # owns the relationship code (its STVRELT), whether to update or add, and
     # what it last sent; these methods only speak the API. Colleague tenants
     # can't use them.
@@ -679,12 +682,13 @@ class PersonMixin(EthosBase):
         from ``existing``). Every given field is sent, empty ones too, so a
         stale extension or number is cleared. ``priority``, ``firstName`` and
         ``lastName`` default to the existing row's. Returns
-        ``(priority or None, log)``.
+        ``(priority or None, log)``. An ``existing`` row without a priority
+        can't be matched, so nothing is sent: ``(None, None)``.
         """
         banner_id = self._banner_id(student)
-        if not banner_id:
-            return None, None
         existing = existing or {}
+        if not banner_id or not existing.get('priority'):
+            return None, None
         criteria = {
             'priority': str(existing.get('priority') or ''),
             'firstName': existing.get('firstName') or '',

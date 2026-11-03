@@ -110,6 +110,8 @@ def resources_list(request):
     from cis.menu import cis_menu, draw_menu
     menu = draw_menu(cis_menu, 'ethos', 'ethos_resources')
     
+    # The current campus's last sync only, even for a superuser (#14): rows
+    # with no campus are never re-synced.
     latest_sync = for_campus(EthosApplication.objects.all()).order_by('-synced_at').values_list('synced_at', flat=True).first()
     return render(request, 'ethos/resources/index.html', {
         'menu': menu,

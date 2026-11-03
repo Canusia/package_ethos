@@ -1,3 +1,4 @@
+{% if no_campus %}<div class="alert alert-warning">This message has no campus. The plan was made as {{ current_campus|default:"the current campus" }}, so any lookup used that campus's Ethos credentials and may describe the wrong college. Give it a campus with <code>assign_ethos_campus</code> before consuming it.</div>{% endif %}
 {% if error %}
   <div class="alert alert-danger mb-0">
     <strong>plan() raised an error:</strong>
@@ -9,7 +10,7 @@
   </div>
 {% else %}
   {% if dry_run %}
-    <div class="alert alert-info">Dry run — nothing was written.</div>
+    <div class="alert alert-info">Dry run — no records were changed.</div>
   {% endif %}
   {% if plan.blocked %}
     <div class="alert alert-warning">

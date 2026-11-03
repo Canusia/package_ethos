@@ -18,8 +18,10 @@ if importlib.util.find_spec('ethos.ethos'):
     from ethos.ethos.models import (
         EthosApplication, EthosLog, EthosMessage, EthosRepresentation, EthosResource,
     )
-    from ethos.ethos.views.logs import EthosLogViewSet, log_detail
-    from ethos.ethos.views.messages import EthosMessageViewSet, message_consume, message_detail
+    from ethos.ethos.views.logs import EthosLogViewSet, log_copy, log_detail
+    from ethos.ethos.views.messages import (
+        EthosMessageViewSet, message_consume, message_detail, message_dry_run,
+    )
     from ethos.ethos.views.resources import (
         EthosResourceViewSet, resource_detail, resource_set_preferred,
     )
@@ -27,8 +29,10 @@ else:
     from ethos.models import (
         EthosApplication, EthosLog, EthosMessage, EthosRepresentation, EthosResource,
     )
-    from ethos.views.logs import EthosLogViewSet, log_detail
-    from ethos.views.messages import EthosMessageViewSet, message_consume, message_detail
+    from ethos.views.logs import EthosLogViewSet, log_copy, log_detail
+    from ethos.views.messages import (
+        EthosMessageViewSet, message_consume, message_detail, message_dry_run,
+    )
     from ethos.views.resources import EthosResourceViewSet, resource_detail, resource_set_preferred
 
 User = get_user_model()
@@ -133,6 +137,30 @@ class SuperuserSeesNullCampusTests(NullCampusFixture):
         own = self._view(resource_detail, self.su, self.res_a.pk).content
         self.assertIn(b'>Set</button>', own)
 
+    def test_resource_feed_query_count_does_not_grow_with_rows(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        def count():
+            with CaptureQueriesContext(connection) as ctx:
+                self._api(EthosResourceViewSet, self.su)
+            return len(ctx.captured_queries)
+
+        before = count()
+        app = EthosApplication.objects.create(ethos_id='gx', name='X', campus=None)
+        for i in range(3):
+            EthosResource.objects.create(application=app, name=f'r{i}')
+        self.assertEqual(count(), before)
+
+    def test_log_copy_opens(self):
+        self.assertEqual(self._view(log_copy, self.su, self.log_none.pk).status_code, 200)
+
+    def test_dry_run_warns_that_the_plan_used_this_campus(self):
+        content = self._view(message_dry_run, self.su, self.msg_none.pk, method='post').content
+        self.assertIn(b'This message has no campus', content)
+        own = self._view(message_dry_run, self.su, self.msg_a.pk, method='post').content
+        self.assertNotIn(b'This message has no campus', own)
+
     def test_writes_stay_on_the_current_campus(self):
         with self.assertRaises(Http404):
             self._view(message_consume, self.su, self.msg_none.pk, method='post')
@@ -155,6 +183,12 @@ class NonSuperuserTests(NullCampusFixture):
                           (resource_detail, self.res_none)):
             with self.subTest(view=view.__name__), self.assertRaises(Http404):
                 self._view(view, self.staff, obj.pk)
+
+    def test_log_copy_and_dry_run_of_null_campus_row_are_404(self):
+        with self.assertRaises(Http404):
+            self._view(log_copy, self.staff, self.log_none.pk)
+        with self.assertRaises(Http404):
+            self._view(message_dry_run, self.staff, self.msg_none.pk, method='post')
 
 
 @override_settings(MULTI_CAMPUS=False)

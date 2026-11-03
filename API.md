@@ -854,6 +854,7 @@ SPREMRG). Unlike the EEDM `person-emergency-contacts` endpoint behind
 | Key | Banner ID (`student.user.psid`), not the person GUID. If the student has no Banner ID, nothing is sent and the log is `None`. |
 | Media types | GET and PUT `application/vnd.hedtech.integration.v1.1.0+json`; POST `v1.0.0`, the only version the spec offers for POST |
 | Tenant owns | `reltCode` (each school's STVRELT), whether to update or add, and what it last sent |
+| Errors | An HTTP error returns `ok=False` or `None`, with the log. A network error (`requests.RequestException`, such as a timeout) is raised, as from every other client method. |
 
 ```mermaid
 flowchart LR
@@ -900,6 +901,7 @@ Sends a `PUT` over `existing`, which is a row from `list_emergency_contacts`.
 - Banner picks the row by `criteria.priority`, `criteria.firstName` and `criteria.lastName`, which are always taken from `existing`.
 - The unprefixed fields are the new values. Every field passed is sent, empty ones too, so `'phoneExt': ''` clears a stale extension.
 - `priority`, `firstName` and `lastName` are required by Banner, and default to the existing row's values when `fields` leaves them out.
+- If `existing` has no `priority`, the row can't be matched, so nothing is sent and the result is `(None, None)`.
 
 Verified live on SCCC's Banner (2026-11-03): a PUT that splits the phone and clears the extension. Not yet verified live: POST, and a PUT that renames the contact.
 

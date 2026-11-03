@@ -155,3 +155,8 @@ class UpdateTests(EmergencyContactTestBase):
         self.assertEqual(self.eth.update_emergency_contact(_student(psid=''), ROW, {}),
                          (None, None))
         self.api.assert_not_called()
+
+    def test_existing_row_without_priority_sends_nothing(self):
+        self.assertEqual(self.eth.update_emergency_contact(
+            _student(), {'firstName': 'Pat', 'lastName': 'Lee'}, {'phoneExt': ''}), (None, None))
+        self.api.assert_not_called()
