@@ -12,7 +12,10 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from django.utils import timezone
 
 from rest_framework import viewsets
-from rest_framework_datatables.filters import DatatablesFilterBackend
+try:  # myce_cis >= 0.1.44a: search and order only on allowed paths (package-cis#148)
+    from cis.datatables_filters import SafeDatatablesFilterBackend as _DatatablesBackend
+except ImportError:  # older cis, or no cis
+    from rest_framework_datatables.filters import DatatablesFilterBackend as _DatatablesBackend
 
 from ..campus import for_campus
 from ..models import EthosLog
@@ -26,7 +29,7 @@ def _searched_id(request):
     return int(term) if term.isdigit() and len(term) < 19 else None
 
 
-class EthosLogFilterBackend(DatatablesFilterBackend):
+class EthosLogFilterBackend(_DatatablesBackend):
     """The datatables search, plus: a numeric search term also finds the log with that
     id (package_ethos#12). The free-text match on the searchable columns is unchanged."""
 
