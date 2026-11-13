@@ -120,8 +120,19 @@ def create_from_sis(request):
             meta=year_data
         )
 
+        # Terms first, then sub-terms under them (package-cis#168): sub-term
+        # titles repeat in every term ("Full Term"), so they are created as
+        # children labelled "<Term> – <title>", the way Pull Sub-Terms does.
+        upsert_subterms = getattr(Term, 'upsert_sis_subterms', None)
+        subterms_by_parent = {}
         terms_created = 0
         for term_data in selected_terms:
+            category = term_data.get('category') or {}
+            parent_id = (category.get('parent') or {}).get('id')
+            if upsert_subterms and category.get('type') == 'subterm' and parent_id:
+                subterms_by_parent.setdefault(parent_id, []).append(term_data)
+                continue
+
             dates = {}
             if term_data.get('startOn'):
                 dates['start'] = term_data['startOn']
@@ -138,9 +149,28 @@ def create_from_sis(request):
             )
             terms_created += 1
 
+        subterms_done, subterms_skipped = 0, 0
+        for parent_id, subterms in subterms_by_parent.items():
+            parent = Term.objects.filter(
+                academic_year=academic_year, external_sis_id=parent_id).first()
+            if parent is None:
+                subterms_skipped += len(subterms)
+                continue
+            created, updated, skipped = upsert_subterms(parent, subterms)
+            subterms_done += created + updated
+            subterms_skipped += skipped
+
+        message = f'Created academic year "{academic_year.name}" with {terms_created} term(s)'
+        if subterms_by_parent:
+            message += f' and {subterms_done} sub-term(s)'
+        message += '.'
+        if subterms_skipped:
+            message += (f' {subterms_skipped} sub-term(s) skipped: their term is not '
+                        f'in this year, or the label is taken.')
+
         return JsonResponse({
             'status': 'success',
-            'message': f'Created academic year "{academic_year.name}" with {terms_created} term(s).',
+            'message': message,
             'academic_year_id': str(academic_year.id),
             'academic_year_name': str(academic_year.name),
         })
