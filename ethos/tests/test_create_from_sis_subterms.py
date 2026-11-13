@@ -82,3 +82,11 @@ class CreateFromSisSubtermsTests(TestCase):
         data = self.post([_period(ORPHAN, '24WI1', 'Full Term', 'subterm', FALL)])
         self.assertFalse(Term.objects.filter(external_sis_id=ORPHAN).exists())
         self.assertIn('skipped', data['message'])
+
+    def test_refused_term_is_not_counted(self):
+        """cis refuses a term whose label is taken by another SIS id (#168)."""
+        ay = AcademicYear.objects.create(name='2024-2025', external_sis_id=YEAR)
+        Term.objects.create(academic_year=ay, label='Fall', code='OLD',
+                            external_sis_id='66666666-6666-6666-6666-666666666666')
+        data = self.post([TERMS[0], TERMS[2]])
+        self.assertIn('with 1 term(s)', data['message'])

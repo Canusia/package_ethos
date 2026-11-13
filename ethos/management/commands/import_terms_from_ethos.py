@@ -79,15 +79,16 @@ class Command(EthosCommand):
             if term_data.get('endOn'):
                 dates['end'] = term_data['endOn']
 
-            Term.get_or_add(
+            # An empty queryset means cis refused it (label taken by another SIS id).
+            if Term.get_or_add(
                 academic_year=academic_year,
                 label=term_data.get('title', term_data.get('code')),
                 code=term_data.get('code', ''),
                 external_sis_id=term_data['id'],
                 meta=term_data,
                 dates=dates,
-            )
-            terms_created += 1
+            ):
+                terms_created += 1
 
         self.stdout.write(self.style.SUCCESS(
             f'Created academic year "{academic_year.name}" with {terms_created} term(s).'

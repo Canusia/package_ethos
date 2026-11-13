@@ -139,15 +139,16 @@ def create_from_sis(request):
             if term_data.get('endOn'):
                 dates['end'] = term_data['endOn']
 
-            Term.get_or_add(
+            # An empty queryset means cis refused it (label taken by another SIS id).
+            if Term.get_or_add(
                 academic_year=academic_year,
                 label=term_data.get('title', term_data.get('code')),
                 code=term_data.get('code', ''),
                 external_sis_id=term_data['id'],
                 meta=term_data,
                 dates=dates
-            )
-            terms_created += 1
+            ):
+                terms_created += 1
 
         subterms_done, subterms_skipped = 0, 0
         for parent_id, subterms in subterms_by_parent.items():
