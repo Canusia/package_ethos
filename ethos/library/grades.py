@@ -148,11 +148,14 @@ class GradesMixin(EthosBase):
         raise UnverifiedGradesLookupError(resp.status_code)
 
     def submit_unverified_grade(self, section_registration_id, grade_id, grade_type_id,
-                                submitted_by_id=None, record_id=None, **kwargs):
+                                submitted_by_id=None, record_id=None, last_attendance=None,
+                                **kwargs):
         """Create (POST) or update (PUT) a Banner unverified grade.
 
         `submissions` is part of the Content-Type, not the URL. `submittedBy` is
-        optional in the schema and omitted when not given.
+        optional in the schema and omitted when not given. `last_attendance` (a
+        date) is sent as ``lastAttendance.date``; Banner requires it for failing
+        grades at some institutions (EWU Zendesk #3222). Omitted when not given.
 
         Returns:
             (success: bool, log: EthosLog). On success the record id is
@@ -165,6 +168,8 @@ class GradesMixin(EthosBase):
         }
         if submitted_by_id:
             payload['submittedBy'] = {'id': submitted_by_id}
+        if last_attendance:
+            payload['lastAttendance'] = {'date': last_attendance.isoformat()}
 
         if record_id:
             method, url = 'PUT', f'{self.URL}/api/student-unverified-grades/{record_id}'

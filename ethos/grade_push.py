@@ -142,8 +142,11 @@ def _record_campus(registration):
     return getattr(course, 'campus', None)
 
 
-def push_final_grade(registration, grade, existing_record_id=None):
+def push_final_grade(registration, grade, existing_record_id=None, last_attendance=None):
     """Create or update the Banner unverified FINAL grade for `registration`.
+
+    `last_attendance` (a date, optional) is sent as Banner's lastAttendance;
+    the caller decides which grades need it.
 
     The record decides the campus, as in the host's mirror_to_sis: the push
     runs inside the registration's course campus, so the Ethos credentials
@@ -153,13 +156,15 @@ def push_final_grade(registration, grade, existing_record_id=None):
     """
     campus = _record_campus(registration)
     if campus is None:
-        return _push_final_grade(registration, grade, existing_record_id, None)
+        return _push_final_grade(registration, grade, existing_record_id, None,
+                                 last_attendance)
     from cis.campus_context import campus_context
     with campus_context(campus):
-        return _push_final_grade(registration, grade, existing_record_id, campus)
+        return _push_final_grade(registration, grade, existing_record_id, campus,
+                                 last_attendance)
 
 
-def _push_final_grade(registration, grade, existing_record_id, campus):
+def _push_final_grade(registration, grade, existing_record_id, campus, last_attendance=None):
     """push_final_grade's body, run under the registration's campus."""
     ethos = _get_client(campus)
     guids = ethos._load_sis_guids()
@@ -198,9 +203,11 @@ def _push_final_grade(registration, grade, existing_record_id, campus):
         if existing:
             record_id = existing[0].get('id')
 
+    # Passed only when set, so a call without a date is exactly as before.
+    extra = {'last_attendance': last_attendance} if last_attendance else {}
     success, log = ethos.submit_unverified_grade(
         section_registration_id, grade_id, guid_of(guids.get('final_grade_type')),
-        submitted_by_id=submitted_by, record_id=record_id)
+        submitted_by_id=submitted_by, record_id=record_id, **extra)
 
     if not success:
         return _result(

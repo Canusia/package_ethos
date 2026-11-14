@@ -1,6 +1,7 @@
 """ethos.grade_push.push_final_grade — registration -> Banner unverified grade."""
 import json
 import time
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -63,6 +64,15 @@ class PushFinalGradeTests(TestCase):
         self.assertEqual(result.record_id, RECORD)
         self.ethos.submit_unverified_grade.assert_called_once_with(
             REG_SIS, A_GUID, TYPE, submitted_by_id=BY, record_id=None)
+
+    def test_last_attendance_is_forwarded(self):
+        when = date(2026, 10, 2)
+
+        result = grade_push.push_final_grade(self.registration, 'A', last_attendance=when)
+
+        self.assertTrue(result.success)
+        self.ethos.submit_unverified_grade.assert_called_once_with(
+            REG_SIS, A_GUID, TYPE, submitted_by_id=BY, record_id=None, last_attendance=when)
 
     def test_existing_banner_record_is_updated(self):
         self.ethos.get_unverified_grades.return_value = [{'id': RECORD}]

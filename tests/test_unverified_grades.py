@@ -1,5 +1,6 @@
 """GradesMixin student-unverified-grades calls (Banner final-grade submission)."""
 import json
+from datetime import date
 from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
@@ -88,6 +89,36 @@ class SubmitUnverifiedGradeTests(TestCase):
         self.assertFalse(success)
         self.assertEqual(log.response_status, 400)
 
+
+    @patch('ethos.ethos.library.base.requests.post')
+    def test_last_attendance_sent_on_create(self, mock_post):
+        """Banner rejects a failing grade without lastAttendance (EWU Zendesk #3222)."""
+        mock_post.return_value = _resp(status=201)
+
+        self.ethos.submit_unverified_grade(REG, GRADE, TYPE, submitted_by_id=BY,
+                                           last_attendance=date(2026, 10, 2))
+
+        body = json.loads(mock_post.call_args.kwargs['data'])
+        self.assertEqual(body['lastAttendance'], {'date': '2026-10-02'})
+
+    @patch('ethos.ethos.library.base.requests.put')
+    def test_last_attendance_sent_on_update(self, mock_put):
+        mock_put.return_value = _resp()
+
+        self.ethos.submit_unverified_grade(REG, GRADE, TYPE, record_id=RECORD,
+                                           last_attendance=date(2026, 10, 2))
+
+        body = json.loads(mock_put.call_args.kwargs['data'])
+        self.assertEqual(body['lastAttendance'], {'date': '2026-10-02'})
+
+    @patch('ethos.ethos.library.base.requests.post')
+    def test_last_attendance_omitted_when_not_given(self, mock_post):
+        mock_post.return_value = _resp(status=201)
+
+        self.ethos.submit_unverified_grade(REG, GRADE, TYPE)
+
+        body = json.loads(mock_post.call_args.kwargs['data'])
+        self.assertNotIn('lastAttendance', body)
 
 class GetUnverifiedGradesTests(TestCase):
     def setUp(self):
