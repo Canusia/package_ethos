@@ -22,6 +22,16 @@ UNVERIFIED_GRADES_SUBMISSION = (
 NIL_GUID = '00000000-0000-0000-0000-000000000000'
 
 
+
+def _iso_date(value):
+    """'YYYY-MM-DD' for a date, a datetime (its date) or an ISO date string."""
+    import datetime as _dt
+    if isinstance(value, _dt.datetime):
+        value = value.date()
+    if isinstance(value, _dt.date):
+        return value.isoformat()
+    return _dt.date.fromisoformat(str(value).strip()[:10]).isoformat()
+
 class UnverifiedGradesLookupError(Exception):
     """A non-OK response to the Banner unverified-grades lookup.
 
@@ -169,7 +179,7 @@ class GradesMixin(EthosBase):
         if submitted_by_id:
             payload['submittedBy'] = {'id': submitted_by_id}
         if last_attendance:
-            payload['lastAttendance'] = {'date': last_attendance.isoformat()}
+            payload['lastAttendance'] = {'date': _iso_date(last_attendance)}
 
         if record_id:
             method, url = 'PUT', f'{self.URL}/api/student-unverified-grades/{record_id}'

@@ -89,7 +89,6 @@ class SubmitUnverifiedGradeTests(TestCase):
         self.assertFalse(success)
         self.assertEqual(log.response_status, 400)
 
-
     @patch('ethos.ethos.library.base.requests.post')
     def test_last_attendance_sent_on_create(self, mock_post):
         """Banner rejects a failing grade without lastAttendance (EWU Zendesk #3222)."""
@@ -119,6 +118,16 @@ class SubmitUnverifiedGradeTests(TestCase):
 
         body = json.loads(mock_post.call_args.kwargs['data'])
         self.assertNotIn('lastAttendance', body)
+
+    @patch('ethos.ethos.library.base.requests.post')
+    def test_last_attendance_datetime_and_string_become_a_date(self, mock_post):
+        from datetime import datetime
+        mock_post.return_value = _resp(status=201)
+        for value in (datetime(2026, 10, 2, 15, 30), '2026-10-02'):
+            self.ethos.submit_unverified_grade(REG, GRADE, TYPE, last_attendance=value)
+            body = json.loads(mock_post.call_args.kwargs['data'])
+            self.assertEqual(body['lastAttendance'], {'date': '2026-10-02'})
+
 
 class GetUnverifiedGradesTests(TestCase):
     def setUp(self):

@@ -275,7 +275,7 @@ The `Ethos` class composes 15 mixins:
 | `SectionDetailMixin` | `section_detail.py` | `get_section_meeting_times`, `get_section_instructors`, `get_section_enrollment_info`, `get_section_registrations`, `get_section_registration_statuses`, `get_section_grade_types` |
 | `StudentRecordsMixin` | `student_records.py` | `get_student`, `get_student_academic_periods`, `get_student_academic_programs`, `get_student_course_registrations`, `get_student_academic_standings`, `get_enrollment_statuses`, `get_student_types` |
 | `StudentAccountMixin` | `student_account.py` | `get_account_summary`, `get_account_details`, `get_account_memos`, `get_financial_aid_awards`, `get_financial_aid_years` |
-| `GradesMixin` | `grades.py` | `get_student_grades`, `get_grade_definitions`, `get_grade_modes`, `get_student_gpa`, `get_section_grade_types`, `submit_student_grade` |
+| `GradesMixin` | `grades.py` | `get_student_grades`, `get_grade_definitions`, `get_grade_modes`, `get_student_gpa`, `get_section_grade_types`, `submit_student_grade`, `get_unverified_grades`, `submit_unverified_grade` (Banner final grade; `last_attendance=` sends `lastAttendance.date`) |
 | `HoldsMixin` | `holds.py` | `get_person_holds`, `get_person_hold`, `get_hold_type_codes`, `get_person_hold_types`, `release_person_hold` |
 | `ReferenceMixin` | `reference.py` | `get_academic_levels`, `get_instructional_methods`, `get_grade_schemes`, `get_academic_catalogs`, `get_educational_institution`, `get_educational_institutions` |
 | `PersonMixin` | `person.py` | `get_or_create_person`, `update_person`, `get_person`, `get_bannerid`, `create_external_ed`, `send_emergency_contact`, `list_emergency_contacts`, `create_emergency_contact`, `update_emergency_contact`, `put_misc_info` (and module-level `split_phone`) |

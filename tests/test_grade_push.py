@@ -297,6 +297,7 @@ class PushFinalGradeCampusTests(TestCase):
         self.b = Campus.objects.create(name=f'{prefix} B', code=f'{prefix}-gpb')
 
         self.seen = []  # (campus passed to Ethos(), ambient campus at submit)
+        self.kwargs = []  # submit_unverified_grade keyword arguments
         patcher = patch.object(grade_push, 'Ethos', side_effect=self._client_for)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -310,6 +311,7 @@ class PushFinalGradeCampusTests(TestCase):
 
         def submit(*args, **kwargs):
             self.seen.append((campus, current_campus_or_none()))
+            self.kwargs.append(kwargs)
             return True, _log()
 
         client.submit_unverified_grade.side_effect = submit
@@ -325,6 +327,13 @@ class PushFinalGradeCampusTests(TestCase):
         self.assertTrue(grade_push.push_final_grade(self._registration(self.b), 'A').success)
 
         self.assertEqual(self.seen, [(self.b, self.b)])
+
+    @override_settings(MULTI_CAMPUS=True)
+    def test_multi_campus_forwards_last_attendance(self):
+        when = date(2026, 10, 2)
+        grade_push.push_final_grade(self._registration(self.b), 'A', last_attendance=when)
+
+        self.assertEqual(self.kwargs[-1].get('last_attendance'), when)
 
     @override_settings(MULTI_CAMPUS=True)
     def test_multi_campus_keeps_one_client_per_campus(self):
